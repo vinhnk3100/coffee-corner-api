@@ -6,11 +6,13 @@ import {
   Body,
   Param,
   Delete,
+  UseGuards,
 } from '@nestjs/common';
 import { UserDTO } from './user.dto';
 import { StatusCode } from 'src/ultils/constant/HttpsCode';
 import { UserService } from './user.service';
 import { hashPassword } from '../ultils/auth.utils';
+import { RolesGuard } from 'src/config/roles.guard';
 
 @Controller('api/user')
 export class UserController {
@@ -41,6 +43,7 @@ export class UserController {
     }
   }
 
+  @UseGuards(RolesGuard)
   @Get(':id')
   async findOne(@Param('id') id): Promise<any> {
     try {
@@ -86,12 +89,11 @@ export class UserController {
   @Put(':id')
   async updateUser(@Param('id') id, @Body() userDTO: UserDTO) {
     try {
-      const updateUser = await this.userService.update(id, userDTO);
+      await this.userService.update(id, userDTO);
       return {
         success: 'ok',
         statusCode: StatusCode.OK,
         msg: `Update user ${id} successfully`,
-        user: updateUser,
       };
     } catch (e) {
       return {

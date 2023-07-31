@@ -1,32 +1,36 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, Post, Request, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { StatusCode } from 'src/ultils/constant/HttpsCode';
-import { AuthDTO } from './auth.dto';
+import { LocalAuthGuard } from './local-auth.guard';
 
 @Controller('api/auth')
 export class AuthController {
   constructor(private authService: AuthService) {}
 
+  @UseGuards(LocalAuthGuard)
   @Post('signin')
-  async signIn(@Body() authDTO: AuthDTO) {
+  async signIn(@Request() req): Promise<any> {
     try {
-      const validateSignIn = await this.authService.signIn(
-        authDTO.username,
-        authDTO.password,
-      );
-
-      if (!validateSignIn || validateSignIn === null) {
-        return {
-          success: 'ok',
-          statusCode: StatusCode.BAD_REQUEST,
-          msg: 'Username or Password is incorrect',
-        };
-      }
+      const user = req.user;
       return {
         success: 'ok',
         statusCode: StatusCode.OK,
         msg: 'Login success',
+        user: user,
       };
+    } catch (e) {
+      return {
+        success: 'false',
+        statusCode: StatusCode.BAD_REQUEST,
+        err: e.message,
+      };
+    }
+  }
+
+  @Post('signout')
+  async signOut(@Request() req): Promise<any> {
+    try {
+      req.logout();
     } catch (e) {
       return {
         success: 'false',

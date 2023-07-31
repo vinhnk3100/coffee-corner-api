@@ -5,7 +5,7 @@ import {
   Matches,
   MinLength,
 } from 'class-validator';
-import { Role } from 'src/ultils/constant/Role';
+import { Role } from 'src/schemas/role.schema';
 import { Unique } from 'src/ultils/validation.utils';
 
 export class UserDTO {
@@ -36,5 +36,5 @@ export class UserDTO {
   password: string;
 
   @IsString()
-  role: Role;
+  roles: Role;
 }

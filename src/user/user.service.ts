@@ -17,11 +17,11 @@ export class UserService {
   }
 
   async findAll(): Promise<User[]> {
-    return await this.userModel.find({}, ['-password', '-role']).exec();
+    return await this.userModel.find({}, ['-password']).populate('roles');
   }
 
   async findById(id: User): Promise<User> {
-    return await this.userModel.findById(id).exec();
+    return await this.userModel.findById(id).populate('roles').exec();
   }
 
   async findExisted(property: string, value?: User): Promise<any> {
@@ -29,13 +29,14 @@ export class UserService {
   }
 
   async update(id: User, userDTO: UserDTO): Promise<User> {
+    console.log(userDTO);
     return await this.userModel
       .findByIdAndUpdate(
         { _id: id },
         { $set: userDTO },
         { upsert: true, new: true },
       )
-      .select(['-password', '-role']);
+      .select(['-password']);
   }
 
   async delete(id: User): Promise<User> {
