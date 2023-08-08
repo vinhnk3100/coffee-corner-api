@@ -6,18 +6,18 @@ import {
   Body,
   Param,
   Delete,
-  UseGuards,
 } from '@nestjs/common';
 import { UserDTO } from './user.dto';
 import { StatusCode } from 'src/ultils/constant/HttpsCode';
 import { UserService } from './user.service';
 import { hashPassword } from '../ultils/auth.utils';
-import { RolesGuard } from 'src/config/roles.guard';
+import { Roles } from 'src/auth/common/decorators/role.decorator';
 
 @Controller('api/user')
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
+  @Roles('ADMIN')
   @Get()
   async findAll(): Promise<any> {
     try {
@@ -43,7 +43,7 @@ export class UserController {
     }
   }
 
-  @UseGuards(RolesGuard)
+  @Roles('ADMIN')
   @Get(':id')
   async findOne(@Param('id') id): Promise<any> {
     try {
@@ -86,6 +86,7 @@ export class UserController {
     }
   }
 
+  @Roles('ADMIN')
   @Put(':id')
   async updateUser(@Param('id') id, @Body() userDTO: UserDTO) {
     try {
@@ -104,6 +105,7 @@ export class UserController {
     }
   }
 
+  @Roles('ADMIN')
   @Delete(':id')
   async deleteUser(@Param('id') id) {
     try {

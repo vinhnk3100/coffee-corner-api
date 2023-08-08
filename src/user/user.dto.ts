@@ -1,4 +1,5 @@
 import {
+  IsArray,
   IsEmail,
   IsISO8601,
   IsString,
@@ -17,6 +18,7 @@ export class UserDTO {
   username: string;
 
   @MinLength(4)
+  @IsString()
   fullname: string;
 
   @IsEmail()
@@ -35,6 +37,9 @@ export class UserDTO {
   @Matches(new RegExp(/^(?=.*[0-9])(?=.*[!@#$%^&*])[a-zA-Z0-9!@#$%^&*]{6,16}$/))
   password: string;
 
-  @IsString()
+  @IsArray()
   roles: Role;
+
+  @IsString()
+  refreshToken: string;
 }

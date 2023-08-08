@@ -1,3 +1,4 @@
+require('dotenv');
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { useContainer } from 'class-validator';
@@ -8,7 +9,6 @@ declare const module: any;
 async function bootstrap() {
   const appOptions = { cors: true };
 
-  console.log('Check .env at main.ts: ', process.env.PORT);
   const app = await NestFactory.create(AppModule, appOptions);
 
   app.useGlobalPipes(

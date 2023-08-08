@@ -3,7 +3,7 @@ exports.id = 0;
 exports.ids = null;
 exports.modules = {
 
-/***/ 16:
+/***/ 49:
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -21,43 +21,34 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 };
 var _a;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.UserService = void 0;
-const mongoose_1 = __webpack_require__(17);
-const common_1 = __webpack_require__(6);
-const mongoose_2 = __webpack_require__(14);
-const user_schema_1 = __webpack_require__(18);
-let UserService = exports.UserService = class UserService {
-    constructor(userModel) {
-        this.userModel = userModel;
-    }
-    async create(userDTO) {
-        const newUser = new this.userModel(userDTO);
-        return await newUser.save();
+exports.PostService = void 0;
+const common_1 = __webpack_require__(7);
+const mongoose_1 = __webpack_require__(15);
+const mongoose_2 = __webpack_require__(18);
+const post_schema_1 = __webpack_require__(47);
+let PostService = exports.PostService = class PostService {
+    constructor(postModel) {
+        this.postModel = postModel;
     }
     async findAll() {
-        return await this.userModel.find({}, ['-password']).populate('roles');
+        return await this.postModel.find({}).lean().exec();
     }
     async findById(id) {
-        return await this.userModel.findById(id).populate('roles').exec();
+        return await this.postModel.findById(id).populate('userId').lean().exec();
     }
-    async findExisted(property, value) {
-        return await this.userModel.findOne({ [property]: value }).exec();
-    }
-    async update(id, userDTO) {
-        console.log(userDTO);
-        return await this.userModel
-            .findByIdAndUpdate({ _id: id }, { $set: userDTO }, { upsert: true, new: true })
-            .select(['-password']);
-    }
-    async delete(id) {
-        return await this.userModel.findByIdAndRemove(id);
+    async create(files, postDTO) {
+        console.log('files: ', files);
+        const newPost = new this.postModel({
+            thumbnail: files.thumbnail.buffer,
+        });
+        console.log('Create new Post: ', newPost);
     }
 };
-exports.UserService = UserService = __decorate([
+exports.PostService = PostService = __decorate([
     (0, common_1.Injectable)(),
-    __param(0, (0, mongoose_2.InjectModel)(user_schema_1.User.name)),
-    __metadata("design:paramtypes", [typeof (_a = typeof mongoose_1.Model !== "undefined" && mongoose_1.Model) === "function" ? _a : Object])
-], UserService);
+    __param(0, (0, mongoose_1.InjectModel)(post_schema_1.Post.name)),
+    __metadata("design:paramtypes", [typeof (_a = typeof mongoose_2.Model !== "undefined" && mongoose_2.Model) === "function" ? _a : Object])
+], PostService);
 
 
 /***/ })
@@ -67,7 +58,7 @@ exports.runtime =
 /******/ function(__webpack_require__) { // webpackRuntimeModules
 /******/ /* webpack/runtime/getFullHash */
 /******/ (() => {
-/******/ 	__webpack_require__.h = () => ("c84770d6fc23750e539f")
+/******/ 	__webpack_require__.h = () => ("1010f2a66c6eaf689ae3")
 /******/ })();
 /******/ 
 /******/ }
