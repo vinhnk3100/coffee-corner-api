@@ -1181,7 +1181,7 @@ const user_service_1 = __webpack_require__(17);
 const auth_utils_1 = __webpack_require__(21);
 const HttpsCode_1 = __webpack_require__(20);
 const jwt_1 = __webpack_require__(28);
-const listOfRolesFromUser_1 = __webpack_require__(Object(function webpackMissingModule() { var e = new Error("Cannot find module 'src/ultils/listOfRolesFromUser'"); e.code = 'MODULE_NOT_FOUND'; throw e; }()));
+const listOfRolesFromUser_1 = __webpack_require__(29);
 let AuthService = exports.AuthService = class AuthService {
     constructor(userService, jwtService) {
         this.userService = userService;
@@ -1285,7 +1285,24 @@ exports.AuthService = AuthService = __decorate([
 module.exports = require("@nestjs/jwt");
 
 /***/ }),
-/* 29 */,
+/* 29 */
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.listOfRolesFromUser = void 0;
+const listOfRolesFromUser = async (user) => {
+    const listOfRoles = [];
+    await user.roles.map((item) => {
+        listOfRoles.push(item.role);
+    });
+    return listOfRoles;
+};
+exports.listOfRolesFromUser = listOfRolesFromUser;
+
+
+/***/ }),
 /* 30 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
@@ -2287,7 +2304,7 @@ module.exports = require("@nestjs/platform-express");
 /******/ 	
 /******/ 	/* webpack/runtime/getFullHash */
 /******/ 	(() => {
-/******/ 		__webpack_require__.h = () => ("7d1f4677b93516240bec")
+/******/ 		__webpack_require__.h = () => ("3f86a348be165a803487")
 /******/ 	})();
 /******/ 	
 /******/ 	/* webpack/runtime/hasOwnProperty shorthand */
