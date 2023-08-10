@@ -20,11 +20,11 @@ export class UserService {
     return await this.userModel.find({}, ['-password']).lean().exec();
   }
 
-  async findById(id: User): Promise<any> {
+  async findById(id: any): Promise<any> {
     return await this.userModel.findById(id).populate('roles').lean().exec();
   }
 
-  async findExisted(property: string, value?: User): Promise<any> {
+  async findExisted(property: string, value?: any): Promise<any> {
     return await this.userModel
       .findOne({ [property]: value })
       .lean()

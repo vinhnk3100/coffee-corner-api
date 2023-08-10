@@ -6,9 +6,6 @@ export type PostDocument = HydratedDocument<Post>;
 
 @Schema({ timestamps: true })
 export class Post {
-  @Prop({ type: Buffer })
-  thumbnail: any;
-
   @Prop()
   title: string;
 
@@ -18,17 +15,29 @@ export class Post {
   @Prop()
   price: string;
 
-  @Prop({ type: Buffer })
+  @Prop()
   content_img: string[];
 
-  @Prop()
-  rating: string;
+  @Prop({
+    type: [mongoose.Schema.Types.ObjectId],
+    ref: 'User',
+  })
+  thumb_up: User[];
 
   @Prop({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
+    immutable: true,
+    required: true,
   })
   userId: User;
+
+  // Comment prop
+  // @Prop({
+  //   type: [mongoose.Schema.Types.ObjectId],
+  //   ref: 'Comment',
+  // })
+  // comments: Comment[];
 }
 
 export const PostSchema = SchemaFactory.createForClass(Post);

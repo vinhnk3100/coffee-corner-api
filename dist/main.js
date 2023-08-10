@@ -258,6 +258,8 @@ const accessToken_guard_1 = __webpack_require__(44);
 const core_1 = __webpack_require__(5);
 const role_guard_1 = __webpack_require__(45);
 const post_module_1 = __webpack_require__(46);
+const isPostOwner_guard_1 = __webpack_require__(53);
+const coffee_module_1 = __webpack_require__(54);
 let AppModule = exports.AppModule = class AppModule {
 };
 exports.AppModule = AppModule = __decorate([
@@ -280,6 +282,7 @@ exports.AppModule = AppModule = __decorate([
             auth_module_1.AuthModule,
             role_module_1.RoleModule,
             post_module_1.PostModule,
+            coffee_module_1.CoffeeModule,
         ],
         controllers: [app_controller_1.AppController],
         providers: [
@@ -291,6 +294,10 @@ exports.AppModule = AppModule = __decorate([
             {
                 provide: core_1.APP_GUARD,
                 useClass: role_guard_1.RolesGuard,
+            },
+            {
+                provide: core_1.APP_GUARD,
+                useClass: isPostOwner_guard_1.IsPostOwnerGuard,
             },
         ],
     })
@@ -1181,7 +1188,7 @@ const user_service_1 = __webpack_require__(17);
 const auth_utils_1 = __webpack_require__(21);
 const HttpsCode_1 = __webpack_require__(20);
 const jwt_1 = __webpack_require__(28);
-const listOfRolesFromUser_1 = __webpack_require__(29);
+const listOfRolesFromUser_util_1 = __webpack_require__(29);
 let AuthService = exports.AuthService = class AuthService {
     constructor(userService, jwtService) {
         this.userService = userService;
@@ -1200,7 +1207,7 @@ let AuthService = exports.AuthService = class AuthService {
             return user;
         const { password, username, email, roles, ...rest } = user;
         const findUser = await this.userService.findById(user._id);
-        const userListOfRoles = await (0, listOfRolesFromUser_1.listOfRolesFromUser)(findUser);
+        const userListOfRoles = await (0, listOfRolesFromUser_util_1.listOfRolesFromUser)(findUser);
         const payload = {
             id: rest._id,
             username: username,
@@ -1220,7 +1227,7 @@ let AuthService = exports.AuthService = class AuthService {
     }
     async validateUser(username, rawpassword) {
         try {
-            const user = await this.userService.findExisted(username);
+            const user = await this.userService.findExisted('username', username);
             if (!user)
                 return null;
             const validatePassword = await (0, auth_utils_1.comparePassword)(rawpassword, user?.password);
@@ -1238,7 +1245,7 @@ let AuthService = exports.AuthService = class AuthService {
     }
     async generateToken(payload) {
         const [accessToken, refreshToken] = await Promise.all([
-            this.jwtService.signAsync(payload),
+            this.jwtService.signAsync(payload, { expiresIn: '1h' }),
             this.jwtService.signAsync(payload, {
                 expiresIn: '7d',
             }),
@@ -1963,10 +1970,6 @@ const user_schema_1 = __webpack_require__(19);
 let Post = exports.Post = class Post {
 };
 __decorate([
-    (0, mongoose_1.Prop)({ type: Buffer }),
-    __metadata("design:type", Object)
-], Post.prototype, "thumbnail", void 0);
-__decorate([
     (0, mongoose_1.Prop)(),
     __metadata("design:type", String)
 ], Post.prototype, "title", void 0);
@@ -1979,17 +1982,22 @@ __decorate([
     __metadata("design:type", String)
 ], Post.prototype, "price", void 0);
 __decorate([
-    (0, mongoose_1.Prop)({ type: Buffer }),
+    (0, mongoose_1.Prop)(),
     __metadata("design:type", Array)
 ], Post.prototype, "content_img", void 0);
 __decorate([
-    (0, mongoose_1.Prop)(),
-    __metadata("design:type", String)
-], Post.prototype, "rating", void 0);
+    (0, mongoose_1.Prop)({
+        type: [mongoose_2.default.Schema.Types.ObjectId],
+        ref: 'User',
+    }),
+    __metadata("design:type", Array)
+], Post.prototype, "thumb_up", void 0);
 __decorate([
     (0, mongoose_1.Prop)({
         type: mongoose_2.default.Schema.Types.ObjectId,
         ref: 'User',
+        immutable: true,
+        required: true,
     }),
     __metadata("design:type", typeof (_a = typeof user_schema_1.User !== "undefined" && user_schema_1.User) === "function" ? _a : Object)
 ], Post.prototype, "userId", void 0);
@@ -2017,14 +2025,16 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-var _a, _b, _c, _d;
+var _a, _b, _c, _d, _e, _f, _g, _h, _j;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PostController = void 0;
 const common_1 = __webpack_require__(7);
 const post_service_1 = __webpack_require__(49);
 const HttpsCode_1 = __webpack_require__(20);
 const post_dto_1 = __webpack_require__(50);
-const platform_express_1 = __webpack_require__(52);
+const platform_express_1 = __webpack_require__(51);
+const isPostOwner_1 = __webpack_require__(52);
+const getCurrentUser_decorator_1 = __webpack_require__(33);
 let PostController = exports.PostController = class PostController {
     constructor(postService) {
         this.postService = postService;
@@ -2032,7 +2042,6 @@ let PostController = exports.PostController = class PostController {
     async findAll() {
         try {
             const posts = await this.postService.findAll();
-            console.log(posts);
             if (!posts || posts.length <= 0) {
                 return {
                     success: 'ok',
@@ -2054,9 +2063,99 @@ let PostController = exports.PostController = class PostController {
             };
         }
     }
-    async createPost(files, postDTO) {
+    async findOne(postId) {
         try {
-            await this.postService.create(files, postDTO);
+            const post = await this.postService.findOneById(postId);
+            if (!post || post.length <= 0) {
+                return {
+                    success: 'ok',
+                    statusCode: HttpsCode_1.StatusCode.NOT_FOUND,
+                    users: 'Invalid post ID or post not existed',
+                };
+            }
+            return {
+                success: 'ok',
+                statusCode: HttpsCode_1.StatusCode.OK,
+                post: post,
+            };
+        }
+        catch (error) {
+            return {
+                success: 'false',
+                statusCode: HttpsCode_1.StatusCode.BAD_REQUEST,
+                msg: error.message,
+            };
+        }
+    }
+    async createPost(files, userId, postDTO) {
+        try {
+            const newPost = await this.postService.create(files, postDTO, userId);
+            return {
+                success: 'ok',
+                statusCode: HttpsCode_1.StatusCode.OK,
+                msg: `Create post successfully`,
+                post: newPost,
+            };
+        }
+        catch (error) {
+            return {
+                success: 'false',
+                statusCode: HttpsCode_1.StatusCode.BAD_REQUEST,
+                msg: error.message,
+            };
+        }
+    }
+    async thumbUpPost(userId, postId) {
+        try {
+            const postThumbUpEvent = await this.postService.updateThumbUp(postId, userId);
+            if (!postThumbUpEvent) {
+                return {
+                    success: 'ok',
+                    statusCode: HttpsCode_1.StatusCode.OK,
+                    msg: `Thumb down post success`,
+                };
+            }
+            return {
+                success: 'ok',
+                statusCode: HttpsCode_1.StatusCode.OK,
+                msg: `Thumb up post success`,
+            };
+        }
+        catch (error) {
+            return {
+                success: 'false',
+                statusCode: HttpsCode_1.StatusCode.BAD_REQUEST,
+                msg: error.message,
+            };
+        }
+    }
+    async updatePost(postId, files, postDTO) {
+        try {
+            const updatePost = await this.postService.update(postId, files, postDTO);
+            return {
+                success: 'ok',
+                statusCode: HttpsCode_1.StatusCode.OK,
+                msg: `Update post ${postId} successfully`,
+                updatePost: updatePost,
+            };
+        }
+        catch (error) {
+            return {
+                success: 'false',
+                statusCode: HttpsCode_1.StatusCode.BAD_REQUEST,
+                msg: error.message,
+            };
+        }
+    }
+    async deletePost(postId) {
+        try {
+            const post = await this.postService.delete(postId);
+            return {
+                success: 'ok',
+                statusCode: HttpsCode_1.StatusCode.OK,
+                msg: `Delete post ${postId} successfully`,
+                post: post,
+            };
         }
         catch (error) {
             return {
@@ -2074,17 +2173,49 @@ __decorate([
     __metadata("design:returntype", typeof (_b = typeof Promise !== "undefined" && Promise) === "function" ? _b : Object)
 ], PostController.prototype, "findAll", null);
 __decorate([
-    (0, common_1.Post)(),
-    (0, common_1.UseInterceptors)((0, platform_express_1.FileFieldsInterceptor)([
-        { name: 'thumbnail', maxCount: 1 },
-        { name: 'content_img' },
-    ])),
-    __param(0, (0, common_1.UploadedFiles)()),
-    __param(1, (0, common_1.Body)()),
+    (0, common_1.Get)(':postId'),
+    __param(0, (0, common_1.Param)('postId')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, typeof (_c = typeof post_dto_1.PostDTO !== "undefined" && post_dto_1.PostDTO) === "function" ? _c : Object]),
-    __metadata("design:returntype", typeof (_d = typeof Promise !== "undefined" && Promise) === "function" ? _d : Object)
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", typeof (_c = typeof Promise !== "undefined" && Promise) === "function" ? _c : Object)
+], PostController.prototype, "findOne", null);
+__decorate([
+    (0, common_1.Post)(),
+    (0, common_1.UseInterceptors)((0, platform_express_1.FileFieldsInterceptor)([{ name: 'content_img' }])),
+    __param(0, (0, common_1.UploadedFiles)()),
+    __param(1, (0, getCurrentUser_decorator_1.GetCurrentUser)('id')),
+    __param(2, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object, typeof (_d = typeof post_dto_1.PostDTO !== "undefined" && post_dto_1.PostDTO) === "function" ? _d : Object]),
+    __metadata("design:returntype", typeof (_e = typeof Promise !== "undefined" && Promise) === "function" ? _e : Object)
 ], PostController.prototype, "createPost", null);
+__decorate([
+    (0, common_1.Put)('/action/thumbup/:postId'),
+    __param(0, (0, getCurrentUser_decorator_1.GetCurrentUser)('id')),
+    __param(1, (0, common_1.Param)('postId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String]),
+    __metadata("design:returntype", typeof (_f = typeof Promise !== "undefined" && Promise) === "function" ? _f : Object)
+], PostController.prototype, "thumbUpPost", null);
+__decorate([
+    (0, common_1.Put)(':postId'),
+    (0, isPostOwner_1.IsPostOwner)(),
+    (0, common_1.UseInterceptors)((0, platform_express_1.FileFieldsInterceptor)([{ name: 'content_img' }])),
+    __param(0, (0, common_1.Param)('postId')),
+    __param(1, (0, common_1.UploadedFiles)()),
+    __param(2, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object, typeof (_g = typeof post_dto_1.PostDTO !== "undefined" && post_dto_1.PostDTO) === "function" ? _g : Object]),
+    __metadata("design:returntype", typeof (_h = typeof Promise !== "undefined" && Promise) === "function" ? _h : Object)
+], PostController.prototype, "updatePost", null);
+__decorate([
+    (0, common_1.Delete)(':postId'),
+    (0, isPostOwner_1.IsPostOwner)(),
+    __param(0, (0, common_1.Param)('postId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", typeof (_j = typeof Promise !== "undefined" && Promise) === "function" ? _j : Object)
+], PostController.prototype, "deletePost", null);
 exports.PostController = PostController = __decorate([
     (0, common_1.Controller)('api/post'),
     __metadata("design:paramtypes", [typeof (_a = typeof post_service_1.PostService !== "undefined" && post_service_1.PostService) === "function" ? _a : Object])
@@ -2121,23 +2252,76 @@ let PostService = exports.PostService = class PostService {
         this.postModel = postModel;
     }
     async findAll() {
-        return await this.postModel.find({}).lean().exec();
+        return await this.postModel
+            .find()
+            .populate('thumb_up', 'username')
+            .populate('userId', 'avatar username')
+            .lean()
+            .exec();
     }
-    async findById(id) {
-        return await this.postModel.findById(id).populate('userId').lean().exec();
+    async findOneById(postId) {
+        return await this.postModel
+            .findById(postId)
+            .populate('thumb_up', 'username')
+            .populate('userId', 'avatar username')
+            .lean()
+            .exec();
     }
-    async create(files, postDTO) {
+    async create(files, postDTO, userId) {
+        const listContentImage = [];
+        files.content_img.map((i) => {
+            return listContentImage.push(i.originalname);
+        });
         const newPost = new this.postModel({
-            thumbnail: files.thumbnail,
             title: postDTO.title,
             content: postDTO.content,
             price: postDTO.price,
-            content_img: files.thumbnail,
-            rating: postDTO.rating,
-            userId: postDTO.userId,
+            content_img: listContentImage,
+            thumb_up: [],
+            userId: userId,
         });
-        console.log('Create new Post: ', newPost);
         return await newPost.save();
+    }
+    async update(postId, files, postDTO) {
+        const post = await this.postModel.findById(postId);
+        if (!post) {
+            throw new common_1.NotFoundException('Invalid post ID or post not existed');
+        }
+        let newUpdatePost = {};
+        const listContentImage = [];
+        if (files.content_img) {
+            files.content_img.map((i) => {
+                return listContentImage.push(i.originalname);
+            });
+        }
+        newUpdatePost = {
+            title: postDTO.title,
+            content: postDTO.content,
+            price: postDTO.price,
+            content_img: files.content_img ? listContentImage : undefined,
+            thumb_up: postDTO.thumb_up,
+        };
+        if (postDTO.thumb_up) {
+            throw new Error('You cannot change vote');
+        }
+        return await this.postModel.findByIdAndUpdate({ _id: postId }, { $set: newUpdatePost }, { new: true });
+    }
+    async updateThumbUp(postId, userId) {
+        const userList = [];
+        const post = await this.postModel.findById(postId);
+        if (!post) {
+            throw new common_1.NotFoundException('Invalid post ID or post not existed');
+        }
+        post.thumb_up?.map((user) => {
+            userList.push(user.toString());
+        });
+        await this.postModel.findByIdAndUpdate({ _id: postId }, userList.length > 0 && userList.includes(userId)
+            ? { $pull: { thumb_up: userId } }
+            : { $push: { thumb_up: userId } }, { new: true });
+        return 1;
+    }
+    async delete(postId) {
+        return await this.postModel.findByIdAndRemove(postId);
     }
 };
 exports.PostService = PostService = __decorate([
@@ -2162,19 +2346,14 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
-var _a;
+var _a, _b;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PostDTO = void 0;
 const class_validator_1 = __webpack_require__(13);
-const file_decorator_1 = __webpack_require__(51);
 const user_schema_1 = __webpack_require__(19);
 class PostDTO {
 }
 exports.PostDTO = PostDTO;
-__decorate([
-    (0, file_decorator_1.IsFile)({ mime: ['image/jpg', 'image/png'] }),
-    __metadata("design:type", Object)
-], PostDTO.prototype, "thumbnail", void 0);
 __decorate([
     (0, class_validator_1.IsNotEmpty)(),
     (0, class_validator_1.IsString)(),
@@ -2190,57 +2369,163 @@ __decorate([
     __metadata("design:type", String)
 ], PostDTO.prototype, "price", void 0);
 __decorate([
-    (0, file_decorator_1.IsFile)({ mime: ['image/jpg', 'image/png'] }),
-    __metadata("design:type", Object)
-], PostDTO.prototype, "content_img", void 0);
-__decorate([
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
-], PostDTO.prototype, "rating", void 0);
+], PostDTO.prototype, "content_img", void 0);
+__decorate([
+    (0, class_validator_1.IsArray)(),
+    __metadata("design:type", typeof (_a = typeof user_schema_1.User !== "undefined" && user_schema_1.User) === "function" ? _a : Object)
+], PostDTO.prototype, "thumb_up", void 0);
 __decorate([
     (0, class_validator_1.IsString)(),
-    __metadata("design:type", typeof (_a = typeof user_schema_1.User !== "undefined" && user_schema_1.User) === "function" ? _a : Object)
+    __metadata("design:type", typeof (_b = typeof user_schema_1.User !== "undefined" && user_schema_1.User) === "function" ? _b : Object)
 ], PostDTO.prototype, "userId", void 0);
 
 
 /***/ }),
 /* 51 */
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("@nestjs/platform-express");
+
+/***/ }),
+/* 52 */
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.IsFile = void 0;
-const class_validator_1 = __webpack_require__(13);
-function IsFile(options, validationOptions) {
-    return function (object, propertyName) {
-        return (0, class_validator_1.registerDecorator)({
-            name: 'isFile',
-            target: object.constructor,
-            propertyName: propertyName,
-            constraints: [],
-            options: validationOptions,
-            validator: {
-                validate(value, args) {
-                    if (value?.mimetype &&
-                        (options?.mime ?? []).includes(value?.mimetype)) {
-                        return true;
-                    }
-                    return false;
-                },
-            },
-        });
-    };
-}
-exports.IsFile = IsFile;
+exports.IsPostOwner = void 0;
+const common_1 = __webpack_require__(7);
+const IsPostOwner = () => (0, common_1.SetMetadata)('isPostOwner', true);
+exports.IsPostOwner = IsPostOwner;
 
 
 /***/ }),
-/* 52 */
-/***/ ((module) => {
+/* 53 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 "use strict";
-module.exports = require("@nestjs/platform-express");
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var _a, _b;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.IsPostOwnerGuard = void 0;
+const common_1 = __webpack_require__(7);
+const core_1 = __webpack_require__(5);
+const post_service_1 = __webpack_require__(49);
+let IsPostOwnerGuard = exports.IsPostOwnerGuard = class IsPostOwnerGuard {
+    constructor(reflector, postService) {
+        this.reflector = reflector;
+        this.postService = postService;
+    }
+    async canActivate(context) {
+        const request = context.switchToHttp().getRequest();
+        const user = request.user;
+        const postId = request.params.postId;
+        const post = await this.postService.findOneById(postId);
+        const routePath = request.route.path.toString();
+        if (!user || !post)
+            return true;
+        if (routePath.includes('/action/thumbup'))
+            return true;
+        if (this.validateRoles(user.roles))
+            return true;
+        return this.validatePostOwner(user.id, post.userId._id.toString());
+    }
+    validatePostOwner(userId, postUserId) {
+        return userId === postUserId;
+    }
+    validateRoles(roles) {
+        return roles.includes('ADMIN');
+    }
+};
+exports.IsPostOwnerGuard = IsPostOwnerGuard = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [typeof (_a = typeof core_1.Reflector !== "undefined" && core_1.Reflector) === "function" ? _a : Object, typeof (_b = typeof post_service_1.PostService !== "undefined" && post_service_1.PostService) === "function" ? _b : Object])
+], IsPostOwnerGuard);
+
+
+/***/ }),
+/* 54 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+"use strict";
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.CoffeeModule = void 0;
+const common_1 = __webpack_require__(7);
+const coffee_controller_1 = __webpack_require__(55);
+const coffee_service_1 = __webpack_require__(56);
+let CoffeeModule = exports.CoffeeModule = class CoffeeModule {
+};
+exports.CoffeeModule = CoffeeModule = __decorate([
+    (0, common_1.Module)({
+        imports: [],
+        controllers: [coffee_controller_1.CoffeeController],
+        providers: [coffee_service_1.CoffeeService],
+    })
+], CoffeeModule);
+
+
+/***/ }),
+/* 55 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+"use strict";
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.CoffeeController = void 0;
+const common_1 = __webpack_require__(7);
+let CoffeeController = exports.CoffeeController = class CoffeeController {
+};
+exports.CoffeeController = CoffeeController = __decorate([
+    (0, common_1.Controller)('coffee')
+], CoffeeController);
+
+
+/***/ }),
+/* 56 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+"use strict";
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.CoffeeService = void 0;
+const common_1 = __webpack_require__(7);
+let CoffeeService = exports.CoffeeService = class CoffeeService {
+};
+exports.CoffeeService = CoffeeService = __decorate([
+    (0, common_1.Injectable)()
+], CoffeeService);
+
 
 /***/ })
 /******/ 	]);
@@ -2304,7 +2589,7 @@ module.exports = require("@nestjs/platform-express");
 /******/ 	
 /******/ 	/* webpack/runtime/getFullHash */
 /******/ 	(() => {
-/******/ 		__webpack_require__.h = () => ("3f86a348be165a803487")
+/******/ 		__webpack_require__.h = () => ("cb2b9be498537001d6d4")
 /******/ 	})();
 /******/ 	
 /******/ 	/* webpack/runtime/hasOwnProperty shorthand */

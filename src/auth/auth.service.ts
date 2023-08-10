@@ -5,7 +5,7 @@ import { StatusCode } from 'src/ultils/constant/HttpsCode';
 import { JwtService } from '@nestjs/jwt';
 import { User } from 'src/schemas/user.schema';
 import { UserDTO } from 'src/user/user.dto';
-import { listOfRolesFromUser } from 'src/ultils/listOfRolesFromUser';
+import { listOfRolesFromUser } from 'src/ultils/listOfRolesFromUser.util';
 
 @Injectable({})
 export class AuthService {
@@ -51,7 +51,7 @@ export class AuthService {
   async validateUser(username: string, rawpassword: string): Promise<any> {
     try {
       // Check if user existed
-      const user = await this.userService.findExisted(username);
+      const user = await this.userService.findExisted('username', username);
       if (!user) return null;
 
       // Check if password compare is same with that user
@@ -73,7 +73,7 @@ export class AuthService {
 
   async generateToken(payload: any): Promise<any> {
     const [accessToken, refreshToken] = await Promise.all([
-      this.jwtService.signAsync(payload),
+      this.jwtService.signAsync(payload, { expiresIn: '1h' }),
       this.jwtService.signAsync(payload, {
         expiresIn: '7d',
       }),

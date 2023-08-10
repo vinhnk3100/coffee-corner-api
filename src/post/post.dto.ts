@@ -1,11 +1,7 @@
-import { IsNotEmpty, IsString } from 'class-validator';
-import { IsFile } from 'src/auth/common/decorators/file.decorator';
+import { IsNotEmpty, IsArray, IsString } from 'class-validator';
 import { User } from 'src/schemas/user.schema';
 
 export class PostDTO {
-  @IsFile({ mime: ['image/jpg', 'image/png'] })
-  thumbnail: any;
-
   @IsNotEmpty()
   @IsString()
   title: string;
@@ -17,11 +13,11 @@ export class PostDTO {
   @IsString()
   price: string;
 
-  @IsFile({ mime: ['image/jpg', 'image/png'] })
-  content_img: any;
-
   @IsString()
-  rating: string;
+  content_img: string;
+
+  @IsArray()
+  thumb_up: User;
 
   @IsString()
   userId: User;
