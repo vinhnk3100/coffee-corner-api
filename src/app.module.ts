@@ -11,7 +11,8 @@ import { APP_GUARD } from '@nestjs/core';
 import { RolesGuard } from './auth/common/guards/role.guard';
 import { PostModule } from './post/post.module';
 import { IsPostOwnerGuard } from './auth/common/guards/isPostOwner.guard';
-import { CoffeeModule } from './coffee/coffee.module';
+import { CafeModule } from './cafe/cafe.module';
+import { CommentModule } from './comment/comment.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -31,7 +32,8 @@ import { CoffeeModule } from './coffee/coffee.module';
     AuthModule,
     RoleModule,
     PostModule,
-    CoffeeModule,
+    CafeModule,
+    CommentModule,
   ],
   controllers: [AppController],
   providers: [

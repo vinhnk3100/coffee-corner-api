@@ -258,8 +258,9 @@ const accessToken_guard_1 = __webpack_require__(44);
 const core_1 = __webpack_require__(5);
 const role_guard_1 = __webpack_require__(45);
 const post_module_1 = __webpack_require__(46);
-const isPostOwner_guard_1 = __webpack_require__(53);
-const coffee_module_1 = __webpack_require__(54);
+const isPostOwner_guard_1 = __webpack_require__(54);
+const cafe_module_1 = __webpack_require__(55);
+const comment_module_1 = __webpack_require__(60);
 let AppModule = exports.AppModule = class AppModule {
 };
 exports.AppModule = AppModule = __decorate([
@@ -282,7 +283,8 @@ exports.AppModule = AppModule = __decorate([
             auth_module_1.AuthModule,
             role_module_1.RoleModule,
             post_module_1.PostModule,
-            coffee_module_1.CoffeeModule,
+            cafe_module_1.CafeModule,
+            comment_module_1.CommentModule,
         ],
         controllers: [app_controller_1.AppController],
         providers: [
@@ -1586,6 +1588,7 @@ const common_1 = __webpack_require__(7);
 const role_service_1 = __webpack_require__(42);
 const role_dto_1 = __webpack_require__(43);
 const HttpsCode_1 = __webpack_require__(20);
+const role_decorator_1 = __webpack_require__(23);
 let RoleController = exports.RoleController = class RoleController {
     constructor(roleService) {
         this.roleService = roleService;
@@ -1633,11 +1636,11 @@ let RoleController = exports.RoleController = class RoleController {
     }
     async updateRole(id, roleDTO) {
         try {
-            await this.roleService.update(id, roleDTO);
+            const role = await this.roleService.update(id, roleDTO);
             return {
                 success: 'ok',
                 statusCode: HttpsCode_1.StatusCode.OK,
-                msg: `Update role ${roleDTO.role} successfully`,
+                msg: `Update role ${role.role} successfully`,
             };
         }
         catch (e) {
@@ -1668,12 +1671,14 @@ let RoleController = exports.RoleController = class RoleController {
 };
 __decorate([
     (0, common_1.Get)(),
+    (0, role_decorator_1.Roles)('ADMIN'),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", typeof (_b = typeof Promise !== "undefined" && Promise) === "function" ? _b : Object)
 ], RoleController.prototype, "findAll", null);
 __decorate([
     (0, common_1.Post)(),
+    (0, role_decorator_1.Roles)('ADMIN'),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [typeof (_c = typeof role_dto_1.RoleDTO !== "undefined" && role_dto_1.RoleDTO) === "function" ? _c : Object]),
@@ -1681,6 +1686,7 @@ __decorate([
 ], RoleController.prototype, "createRole", null);
 __decorate([
     (0, common_1.Put)(':id'),
+    (0, role_decorator_1.Roles)('ADMIN'),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
@@ -1689,6 +1695,7 @@ __decorate([
 ], RoleController.prototype, "updateRole", null);
 __decorate([
     (0, common_1.Delete)(':id'),
+    (0, role_decorator_1.Roles)('ADMIN'),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
@@ -2001,6 +2008,13 @@ __decorate([
     }),
     __metadata("design:type", typeof (_a = typeof user_schema_1.User !== "undefined" && user_schema_1.User) === "function" ? _a : Object)
 ], Post.prototype, "userId", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({
+        type: [mongoose_2.default.Schema.Types.ObjectId],
+        ref: 'Comment',
+    }),
+    __metadata("design:type", Array)
+], Post.prototype, "comments", void 0);
 exports.Post = Post = __decorate([
     (0, mongoose_1.Schema)({ timestamps: true })
 ], Post);
@@ -2032,8 +2046,8 @@ const common_1 = __webpack_require__(7);
 const post_service_1 = __webpack_require__(49);
 const HttpsCode_1 = __webpack_require__(20);
 const post_dto_1 = __webpack_require__(50);
-const platform_express_1 = __webpack_require__(51);
-const isPostOwner_1 = __webpack_require__(52);
+const platform_express_1 = __webpack_require__(52);
+const isPostOwner_1 = __webpack_require__(53);
 const getCurrentUser_decorator_1 = __webpack_require__(33);
 let PostController = exports.PostController = class PostController {
     constructor(postService) {
@@ -2108,7 +2122,7 @@ let PostController = exports.PostController = class PostController {
     async thumbUpPost(userId, postId) {
         try {
             const postThumbUpEvent = await this.postService.updateThumbUp(postId, userId);
-            if (!postThumbUpEvent) {
+            if (postThumbUpEvent) {
                 return {
                     success: 'ok',
                     statusCode: HttpsCode_1.StatusCode.OK,
@@ -2253,9 +2267,13 @@ let PostService = exports.PostService = class PostService {
     }
     async findAll() {
         return await this.postModel
-            .find()
+            .find({})
             .populate('thumb_up', 'username')
             .populate('userId', 'avatar username')
+            .populate({
+            path: 'comments',
+            populate: { path: 'ownerId', select: 'username' },
+        })
             .lean()
             .exec();
     }
@@ -2264,18 +2282,21 @@ let PostService = exports.PostService = class PostService {
             .findById(postId)
             .populate('thumb_up', 'username')
             .populate('userId', 'avatar username')
+            .populate({
+            path: 'comments',
+            populate: { path: 'ownerId', select: 'username' },
+        })
             .lean()
             .exec();
     }
     async create(files, postDTO, userId) {
         const listContentImage = [];
+        console.log('Files: ', files);
         files.content_img.map((i) => {
             return listContentImage.push(i.originalname);
         });
         const newPost = new this.postModel({
-            title: postDTO.title,
-            content: postDTO.content,
-            price: postDTO.price,
+            ...postDTO,
             content_img: listContentImage,
             thumb_up: [],
             userId: userId,
@@ -2306,6 +2327,20 @@ let PostService = exports.PostService = class PostService {
         }
         return await this.postModel.findByIdAndUpdate({ _id: postId }, { $set: newUpdatePost }, { new: true });
     }
+    async updateComment(postId, commentId) {
+        const commentIdList = [];
+        const post = await this.postModel.findById(postId);
+        if (!post) {
+            throw new common_1.NotFoundException('Invalid post ID or post not existed');
+        }
+        post.comments?.map((comment) => {
+            commentIdList.push(comment.toString());
+        });
+        await this.postModel.findByIdAndUpdate({ _id: postId }, commentIdList.length > 0 && commentIdList.includes(commentId)
+            ? { $pull: { comments: commentId } }
+            : { $push: { comments: commentId } }, { new: true });
+        return;
+    }
     async updateThumbUp(postId, userId) {
         const userList = [];
         const post = await this.postModel.findById(postId);
@@ -2318,7 +2353,7 @@ let PostService = exports.PostService = class PostService {
         await this.postModel.findByIdAndUpdate({ _id: postId }, userList.length > 0 && userList.includes(userId)
             ? { $pull: { thumb_up: userId } }
             : { $push: { thumb_up: userId } }, { new: true });
-        return 1;
+        return userList.length > 0 && userList.includes(userId);
     }
     async delete(postId) {
         return await this.postModel.findByIdAndRemove(postId);
@@ -2346,10 +2381,11 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
-var _a, _b;
+var _a, _b, _c;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PostDTO = void 0;
 const class_validator_1 = __webpack_require__(13);
+const comment_schema_1 = __webpack_require__(51);
 const user_schema_1 = __webpack_require__(19);
 class PostDTO {
 }
@@ -2380,17 +2416,77 @@ __decorate([
     (0, class_validator_1.IsString)(),
     __metadata("design:type", typeof (_b = typeof user_schema_1.User !== "undefined" && user_schema_1.User) === "function" ? _b : Object)
 ], PostDTO.prototype, "userId", void 0);
+__decorate([
+    (0, class_validator_1.IsArray)(),
+    __metadata("design:type", typeof (_c = typeof comment_schema_1.Comment !== "undefined" && comment_schema_1.Comment) === "function" ? _c : Object)
+], PostDTO.prototype, "comments", void 0);
 
 
 /***/ }),
 /* 51 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+"use strict";
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var _a;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.CommentSchema = exports.Comment = void 0;
+const mongoose_1 = __webpack_require__(15);
+const mongoose_2 = __webpack_require__(18);
+const user_schema_1 = __webpack_require__(19);
+let Comment = exports.Comment = class Comment {
+};
+__decorate([
+    (0, mongoose_1.Prop)(),
+    __metadata("design:type", String)
+], Comment.prototype, "content", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({
+        type: [mongoose_2.default.Schema.Types.ObjectId],
+        ref: 'User',
+    }),
+    __metadata("design:type", Array)
+], Comment.prototype, "thumb_up", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({
+        type: [mongoose_2.default.Schema.Types.ObjectId],
+        ref: 'Comment',
+    }),
+    __metadata("design:type", Array)
+], Comment.prototype, "comment_descendand", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({
+        type: mongoose_2.default.Schema.Types.ObjectId,
+        ref: 'User',
+        immutable: true,
+        required: true,
+    }),
+    __metadata("design:type", typeof (_a = typeof user_schema_1.User !== "undefined" && user_schema_1.User) === "function" ? _a : Object)
+], Comment.prototype, "ownerId", void 0);
+exports.Comment = Comment = __decorate([
+    (0, mongoose_1.Schema)({ timestamps: true })
+], Comment);
+exports.CommentSchema = mongoose_1.SchemaFactory.createForClass(Comment);
+
+
+/***/ }),
+/* 52 */
 /***/ ((module) => {
 
 "use strict";
 module.exports = require("@nestjs/platform-express");
 
 /***/ }),
-/* 52 */
+/* 53 */
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 "use strict";
@@ -2403,7 +2499,7 @@ exports.IsPostOwner = IsPostOwner;
 
 
 /***/ }),
-/* 53 */
+/* 54 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 "use strict";
@@ -2456,34 +2552,6 @@ exports.IsPostOwnerGuard = IsPostOwnerGuard = __decorate([
 
 
 /***/ }),
-/* 54 */
-/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
-
-"use strict";
-
-var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
-    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
-    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
-    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
-    return c > 3 && r && Object.defineProperty(target, key, r), r;
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.CoffeeModule = void 0;
-const common_1 = __webpack_require__(7);
-const coffee_controller_1 = __webpack_require__(55);
-const coffee_service_1 = __webpack_require__(56);
-let CoffeeModule = exports.CoffeeModule = class CoffeeModule {
-};
-exports.CoffeeModule = CoffeeModule = __decorate([
-    (0, common_1.Module)({
-        imports: [],
-        controllers: [coffee_controller_1.CoffeeController],
-        providers: [coffee_service_1.CoffeeService],
-    })
-], CoffeeModule);
-
-
-/***/ }),
 /* 55 */
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
@@ -2496,13 +2564,26 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.CoffeeController = void 0;
+exports.CafeModule = void 0;
 const common_1 = __webpack_require__(7);
-let CoffeeController = exports.CoffeeController = class CoffeeController {
+const cafe_controller_1 = __webpack_require__(56);
+const cafe_service_1 = __webpack_require__(57);
+const mongoose_1 = __webpack_require__(15);
+const cafe_schema_1 = __webpack_require__(58);
+const users_module_1 = __webpack_require__(10);
+let CafeModule = exports.CafeModule = class CafeModule {
 };
-exports.CoffeeController = CoffeeController = __decorate([
-    (0, common_1.Controller)('coffee')
-], CoffeeController);
+exports.CafeModule = CafeModule = __decorate([
+    (0, common_1.Module)({
+        imports: [
+            users_module_1.UserModule,
+            mongoose_1.MongooseModule.forFeature([{ name: cafe_schema_1.Cafe.name, schema: cafe_schema_1.CafeSchema }]),
+        ],
+        controllers: [cafe_controller_1.CafeController],
+        providers: [cafe_service_1.CafeService],
+        exports: [cafe_service_1.CafeService],
+    })
+], CafeModule);
 
 
 /***/ }),
@@ -2517,14 +2598,872 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.CoffeeService = void 0;
-const common_1 = __webpack_require__(7);
-let CoffeeService = exports.CoffeeService = class CoffeeService {
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
-exports.CoffeeService = CoffeeService = __decorate([
-    (0, common_1.Injectable)()
-], CoffeeService);
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
+var _a, _b, _c, _d, _e, _f, _g, _h;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.CafeController = void 0;
+const common_1 = __webpack_require__(7);
+const cafe_service_1 = __webpack_require__(57);
+const cafe_dto_1 = __webpack_require__(59);
+const platform_express_1 = __webpack_require__(52);
+const getCurrentUser_decorator_1 = __webpack_require__(33);
+const HttpsCode_1 = __webpack_require__(20);
+const role_decorator_1 = __webpack_require__(23);
+let CafeController = exports.CafeController = class CafeController {
+    constructor(cafeService) {
+        this.cafeService = cafeService;
+    }
+    async findAllCafe() {
+        try {
+            const cafes = await this.cafeService.findAll();
+            if (!cafes || cafes.length < 1) {
+                return {
+                    success: 'ok',
+                    statusCode: HttpsCode_1.StatusCode.NOT_FOUND,
+                    msg: 'There are currently not any suggest cafes right now',
+                };
+            }
+            return {
+                success: 'ok',
+                statusCode: HttpsCode_1.StatusCode.OK,
+                cafes: cafes,
+            };
+        }
+        catch (error) {
+            return {
+                success: 'false',
+                statusCode: HttpsCode_1.StatusCode.BAD_REQUEST,
+                msg: error.message,
+            };
+        }
+    }
+    async findOneById(cafeId) {
+        try {
+            const cafe = await this.cafeService.findById(cafeId);
+            if (!cafe) {
+                return {
+                    success: 'ok',
+                    statusCode: HttpsCode_1.StatusCode.NOT_FOUND,
+                    msg: 'There are currently not any suggest cafes right now',
+                };
+            }
+            return {
+                success: 'ok',
+                statusCode: HttpsCode_1.StatusCode.OK,
+                cafe: cafe,
+            };
+        }
+        catch (error) {
+            return {
+                success: 'false',
+                statusCode: HttpsCode_1.StatusCode.BAD_REQUEST,
+                msg: error.message,
+            };
+        }
+    }
+    async createCafe(files, cafeDTO, userId) {
+        try {
+            const cafe = await this.cafeService.create(files, cafeDTO, userId);
+            return {
+                success: 'ok',
+                statusCode: HttpsCode_1.StatusCode.OK,
+                msg: 'New suggest cafe has been created',
+                cafe: cafe.cafe_name +
+                    ' ' +
+                    cafe.cafe_location.address +
+                    ' ' +
+                    cafe.cafe_location.district,
+            };
+        }
+        catch (error) {
+            return {
+                success: 'false',
+                statusCode: HttpsCode_1.StatusCode.BAD_REQUEST,
+                msg: error.message,
+            };
+        }
+    }
+    async adminApproval(cafeId, cafeDTO) {
+        try {
+            const cafe = await this.cafeService.updateWithoutFiles(cafeId, cafeDTO);
+            return {
+                success: 'ok',
+                statusCode: HttpsCode_1.StatusCode.OK,
+                msg: cafe.admin_approval === 0
+                    ? `Admin has unapproved this cafe.`
+                    : `Admin has approved this cafe.`,
+                updateApproval: 'Admin approved',
+            };
+        }
+        catch (error) {
+            return {
+                success: 'false',
+                statusCode: HttpsCode_1.StatusCode.BAD_REQUEST,
+                msg: error.message,
+            };
+        }
+    }
+    async thumbUpPost(userId, cafeId) {
+        try {
+            const cafeThumbUpEvent = await this.cafeService.updateThumbUp(cafeId, userId);
+            if (cafeThumbUpEvent) {
+                return {
+                    success: 'ok',
+                    statusCode: HttpsCode_1.StatusCode.OK,
+                    msg: `Thumb down cafe success`,
+                };
+            }
+            return {
+                success: 'ok',
+                statusCode: HttpsCode_1.StatusCode.OK,
+                msg: `Thumb up cafe success`,
+            };
+        }
+        catch (error) {
+            return {
+                success: 'false',
+                statusCode: HttpsCode_1.StatusCode.BAD_REQUEST,
+                msg: error.message,
+            };
+        }
+    }
+    async updateCafe(files, cafeId, cafeDTO) {
+        try {
+            console.log('Run at UpdateCafe');
+            const updateCafe = await this.cafeService.update(files, cafeId, cafeDTO);
+            return {
+                success: 'ok',
+                statusCode: HttpsCode_1.StatusCode.OK,
+                msg: `Update suggest cafe successfully`,
+                updateCafe: updateCafe,
+            };
+        }
+        catch (error) {
+            return {
+                success: 'false',
+                statusCode: HttpsCode_1.StatusCode.BAD_REQUEST,
+                msg: error.message,
+            };
+        }
+    }
+    async deleteCafe(cafeId) {
+        try {
+            const cafe = await this.cafeService.delete(cafeId);
+            if (!cafe) {
+                return {
+                    success: 'ok',
+                    statusCode: HttpsCode_1.StatusCode.NOT_FOUND,
+                    msg: 'Invalid ID or cafe not found',
+                };
+            }
+            return {
+                success: 'ok',
+                statusCode: HttpsCode_1.StatusCode.OK,
+                cafe: `Delete cafe ${"'" + cafe.cafe_name + "'"} success`,
+            };
+        }
+        catch (error) {
+            return {
+                success: 'false',
+                statusCode: HttpsCode_1.StatusCode.BAD_REQUEST,
+                msg: error.message,
+            };
+        }
+    }
+};
+__decorate([
+    (0, common_1.Get)(),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", typeof (_b = typeof Promise !== "undefined" && Promise) === "function" ? _b : Object)
+], CafeController.prototype, "findAllCafe", null);
+__decorate([
+    (0, common_1.Get)(':cafeId'),
+    __param(0, (0, common_1.Param)('cafeId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", typeof (_c = typeof Promise !== "undefined" && Promise) === "function" ? _c : Object)
+], CafeController.prototype, "findOneById", null);
+__decorate([
+    (0, common_1.Post)(),
+    (0, role_decorator_1.Roles)('ADMIN', 'COFFEE OWNER'),
+    (0, common_1.UseInterceptors)((0, platform_express_1.FileFieldsInterceptor)([{ name: 'cafe_image' }])),
+    __param(0, (0, common_1.UploadedFiles)()),
+    __param(1, (0, common_1.Body)()),
+    __param(2, (0, getCurrentUser_decorator_1.GetCurrentUser)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, typeof (_d = typeof cafe_dto_1.CafeDTO !== "undefined" && cafe_dto_1.CafeDTO) === "function" ? _d : Object, String]),
+    __metadata("design:returntype", typeof (_e = typeof Promise !== "undefined" && Promise) === "function" ? _e : Object)
+], CafeController.prototype, "createCafe", null);
+__decorate([
+    (0, common_1.Put)('/approve/:cafeId'),
+    (0, role_decorator_1.Roles)('ADMIN'),
+    __param(0, (0, common_1.Param)('cafeId')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, typeof (_f = typeof cafe_dto_1.CafeDTO !== "undefined" && cafe_dto_1.CafeDTO) === "function" ? _f : Object]),
+    __metadata("design:returntype", Promise)
+], CafeController.prototype, "adminApproval", null);
+__decorate([
+    (0, common_1.Put)('/action/thumbup/:cafeId'),
+    __param(0, (0, getCurrentUser_decorator_1.GetCurrentUser)('id')),
+    __param(1, (0, common_1.Param)('cafeId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String]),
+    __metadata("design:returntype", typeof (_g = typeof Promise !== "undefined" && Promise) === "function" ? _g : Object)
+], CafeController.prototype, "thumbUpPost", null);
+__decorate([
+    (0, common_1.Put)(':cafeId'),
+    (0, role_decorator_1.Roles)('ADMIN', 'COFFEE OWNER'),
+    (0, common_1.UseInterceptors)((0, platform_express_1.FileFieldsInterceptor)([{ name: 'cafe_image' }])),
+    __param(0, (0, common_1.UploadedFiles)()),
+    __param(1, (0, common_1.Param)('cafeId')),
+    __param(2, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object, typeof (_h = typeof cafe_dto_1.CafeDTO !== "undefined" && cafe_dto_1.CafeDTO) === "function" ? _h : Object]),
+    __metadata("design:returntype", Promise)
+], CafeController.prototype, "updateCafe", null);
+__decorate([
+    (0, common_1.Delete)(':cafeId'),
+    (0, role_decorator_1.Roles)('ADMIN', 'COFFEE OWNER'),
+    __param(0, (0, common_1.Param)('cafeId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], CafeController.prototype, "deleteCafe", null);
+exports.CafeController = CafeController = __decorate([
+    (0, common_1.Controller)('api/cafe'),
+    __metadata("design:paramtypes", [typeof (_a = typeof cafe_service_1.CafeService !== "undefined" && cafe_service_1.CafeService) === "function" ? _a : Object])
+], CafeController);
+
+
+/***/ }),
+/* 57 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+"use strict";
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
+var _a, _b;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.CafeService = void 0;
+const common_1 = __webpack_require__(7);
+const mongoose_1 = __webpack_require__(15);
+const cafe_schema_1 = __webpack_require__(58);
+const mongoose_2 = __webpack_require__(18);
+const user_service_1 = __webpack_require__(17);
+let CafeService = exports.CafeService = class CafeService {
+    constructor(cafeModel, userService) {
+        this.cafeModel = cafeModel;
+        this.userService = userService;
+    }
+    async findAll() {
+        return await this.cafeModel
+            .find({})
+            .populate({
+            path: 'comments',
+            populate: { path: 'ownerId', select: 'username' },
+        })
+            .lean()
+            .exec();
+    }
+    async findById(cafeId) {
+        return await this.cafeModel
+            .findById(cafeId)
+            .populate({
+            path: 'comments',
+            populate: { path: 'ownerId', select: 'username' },
+        })
+            .lean()
+            .exec();
+    }
+    async create(files, cafeDTO, userId) {
+        const listContentImage = [];
+        let currentUserIsAdmin = 0;
+        const user = await this.userService.findById(userId);
+        user.roles.map((role) => {
+            if (role === 'ADMIN')
+                currentUserIsAdmin = 1;
+        });
+        if (files.cafe_image) {
+            files.cafe_image.map((i) => {
+                return listContentImage.push(i.originalname);
+            });
+        }
+        const newPost = new this.cafeModel({
+            ...cafeDTO,
+            status_open: cafeDTO.status_open,
+            admin_approval: currentUserIsAdmin ? '0' : '1',
+            cafe_image: listContentImage,
+            thumb_up: [],
+        });
+        return await newPost.save();
+    }
+    async update(files, cafeId, cafeDTO) {
+        const listContentImage = [];
+        if (files.cafe_image) {
+            files.cafe_image.map((i) => {
+                return listContentImage.push(i.originalname);
+            });
+        }
+        const newCafe = {
+            ...cafeDTO,
+            cafe_image: listContentImage,
+        };
+        return await this.cafeModel.findByIdAndUpdate({ _id: cafeId }, { $set: newCafe }, { new: true });
+    }
+    async updateComment(cafeId, commentId) {
+        const commentIdList = [];
+        const cafe = await this.cafeModel.findById(cafeId);
+        if (!cafe) {
+            throw new common_1.NotFoundException('Invalid cafe ID or cafe not existed');
+        }
+        cafe.comments?.map((comment) => {
+            commentIdList.push(comment.toString());
+        });
+        await this.cafeModel.findByIdAndUpdate({ _id: cafeId }, commentIdList.length > 0 && commentIdList.includes(commentId)
+            ? { $pull: { comments: commentId } }
+            : { $push: { comments: commentId } }, { new: true });
+        return;
+    }
+    async updateThumbUp(cafeId, userId) {
+        const userList = [];
+        const cafe = await this.cafeModel.findById(cafeId);
+        if (!cafe) {
+            throw new common_1.NotFoundException('Invalid cafe ID or cafe not existed');
+        }
+        cafe.thumb_up?.map((user) => {
+            userList.push(user.toString());
+        });
+        await this.cafeModel.findByIdAndUpdate({ _id: cafeId }, userList.length > 0 && userList.includes(userId)
+            ? { $pull: { thumb_up: userId } }
+            : { $push: { thumb_up: userId } }, { new: true });
+        return userList.length > 0 && userList.includes(userId);
+    }
+    async updateWithoutFiles(cafeId, cafeDTO) {
+        return await this.cafeModel.findByIdAndUpdate({ _id: cafeId }, { $set: cafeDTO }, { new: true });
+    }
+    async delete(cafeId) {
+        return await this.cafeModel.findByIdAndRemove(cafeId).exec();
+    }
+};
+exports.CafeService = CafeService = __decorate([
+    (0, common_1.Injectable)(),
+    __param(0, (0, mongoose_1.InjectModel)(cafe_schema_1.Cafe.name)),
+    __metadata("design:paramtypes", [typeof (_a = typeof mongoose_2.Model !== "undefined" && mongoose_2.Model) === "function" ? _a : Object, typeof (_b = typeof user_service_1.UserService !== "undefined" && user_service_1.UserService) === "function" ? _b : Object])
+], CafeService);
+
+
+/***/ }),
+/* 58 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+"use strict";
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var _a, _b, _c;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.CafeSchema = exports.Cafe = exports.CafeTypeSchema = exports.CafeType = void 0;
+const mongoose_1 = __webpack_require__(15);
+const mongoose_2 = __webpack_require__(18);
+const user_schema_1 = __webpack_require__(19);
+let CafeType = exports.CafeType = class CafeType {
+};
+__decorate([
+    (0, mongoose_1.Prop)({ required: true }),
+    __metadata("design:type", String)
+], CafeType.prototype, "type", void 0);
+__decorate([
+    (0, mongoose_1.Prop)(),
+    __metadata("design:type", String)
+], CafeType.prototype, "type_description", void 0);
+exports.CafeType = CafeType = __decorate([
+    (0, mongoose_1.Schema)()
+], CafeType);
+exports.CafeTypeSchema = mongoose_1.SchemaFactory.createForClass(CafeType);
+let CafeLocation = class CafeLocation {
+};
+__decorate([
+    (0, mongoose_1.Prop)(),
+    __metadata("design:type", String)
+], CafeLocation.prototype, "city", void 0);
+__decorate([
+    (0, mongoose_1.Prop)(),
+    __metadata("design:type", String)
+], CafeLocation.prototype, "district", void 0);
+__decorate([
+    (0, mongoose_1.Prop)(),
+    __metadata("design:type", String)
+], CafeLocation.prototype, "address", void 0);
+CafeLocation = __decorate([
+    (0, mongoose_1.Schema)({ _id: false })
+], CafeLocation);
+let CafePrice = class CafePrice {
+};
+__decorate([
+    (0, mongoose_1.Prop)(),
+    __metadata("design:type", String)
+], CafePrice.prototype, "start", void 0);
+__decorate([
+    (0, mongoose_1.Prop)(),
+    __metadata("design:type", String)
+], CafePrice.prototype, "to", void 0);
+CafePrice = __decorate([
+    (0, mongoose_1.Schema)({ _id: false })
+], CafePrice);
+let OpenHour = class OpenHour {
+};
+__decorate([
+    (0, mongoose_1.Prop)(),
+    __metadata("design:type", String)
+], OpenHour.prototype, "hour", void 0);
+__decorate([
+    (0, mongoose_1.Prop)(),
+    __metadata("design:type", String)
+], OpenHour.prototype, "minute", void 0);
+OpenHour = __decorate([
+    (0, mongoose_1.Schema)({ _id: false })
+], OpenHour);
+let CloseHour = class CloseHour {
+};
+__decorate([
+    (0, mongoose_1.Prop)(),
+    __metadata("design:type", String)
+], CloseHour.prototype, "hour", void 0);
+__decorate([
+    (0, mongoose_1.Prop)(),
+    __metadata("design:type", String)
+], CloseHour.prototype, "minute", void 0);
+CloseHour = __decorate([
+    (0, mongoose_1.Schema)({ _id: false })
+], CloseHour);
+let CafeOpeningTime = class CafeOpeningTime {
+};
+__decorate([
+    (0, mongoose_1.Prop)(),
+    __metadata("design:type", String)
+], CafeOpeningTime.prototype, "opening_day", void 0);
+__decorate([
+    (0, mongoose_1.Prop)(),
+    __metadata("design:type", OpenHour)
+], CafeOpeningTime.prototype, "opening", void 0);
+__decorate([
+    (0, mongoose_1.Prop)(),
+    __metadata("design:type", CloseHour)
+], CafeOpeningTime.prototype, "closing", void 0);
+CafeOpeningTime = __decorate([
+    (0, mongoose_1.Schema)({ _id: false })
+], CafeOpeningTime);
+let EventDate = class EventDate {
+};
+__decorate([
+    (0, mongoose_1.Prop)(),
+    __metadata("design:type", typeof (_a = typeof Date !== "undefined" && Date) === "function" ? _a : Object)
+], EventDate.prototype, "start_date", void 0);
+__decorate([
+    (0, mongoose_1.Prop)(),
+    __metadata("design:type", typeof (_b = typeof Date !== "undefined" && Date) === "function" ? _b : Object)
+], EventDate.prototype, "end_date", void 0);
+EventDate = __decorate([
+    (0, mongoose_1.Schema)({ _id: false })
+], EventDate);
+let CafeCurrentEvent = class CafeCurrentEvent {
+};
+__decorate([
+    (0, mongoose_1.Prop)(),
+    __metadata("design:type", Number)
+], CafeCurrentEvent.prototype, "onDiscountPercent", void 0);
+__decorate([
+    (0, mongoose_1.Prop)(),
+    __metadata("design:type", String)
+], CafeCurrentEvent.prototype, "event_content", void 0);
+__decorate([
+    (0, mongoose_1.Prop)(),
+    __metadata("design:type", EventDate)
+], CafeCurrentEvent.prototype, "event_date", void 0);
+CafeCurrentEvent = __decorate([
+    (0, mongoose_1.Schema)({ _id: false })
+], CafeCurrentEvent);
+let Cafe = exports.Cafe = class Cafe {
+};
+__decorate([
+    (0, mongoose_1.Prop)(),
+    __metadata("design:type", String)
+], Cafe.prototype, "cafe_name", void 0);
+__decorate([
+    (0, mongoose_1.Prop)(),
+    __metadata("design:type", String)
+], Cafe.prototype, "cafe_description", void 0);
+__decorate([
+    (0, mongoose_1.Prop)(),
+    __metadata("design:type", Array)
+], Cafe.prototype, "cafe_image", void 0);
+__decorate([
+    (0, mongoose_1.Prop)(),
+    __metadata("design:type", CafeLocation)
+], Cafe.prototype, "cafe_location", void 0);
+__decorate([
+    (0, mongoose_1.Prop)(),
+    __metadata("design:type", CafePrice)
+], Cafe.prototype, "cafe_price", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({
+        type: mongoose_2.default.Schema.Types.ObjectId,
+        ref: 'User',
+        immutable: true,
+    }),
+    __metadata("design:type", typeof (_c = typeof user_schema_1.User !== "undefined" && user_schema_1.User) === "function" ? _c : Object)
+], Cafe.prototype, "cafe_owner", void 0);
+__decorate([
+    (0, mongoose_1.Prop)(),
+    __metadata("design:type", Array)
+], Cafe.prototype, "thumb_up", void 0);
+__decorate([
+    (0, mongoose_1.Prop)(),
+    __metadata("design:type", CafeOpeningTime)
+], Cafe.prototype, "open_time", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ required: true }),
+    __metadata("design:type", Number)
+], Cafe.prototype, "status_open", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ required: true }),
+    __metadata("design:type", Number)
+], Cafe.prototype, "admin_approval", void 0);
+__decorate([
+    (0, mongoose_1.Prop)(),
+    __metadata("design:type", CafeCurrentEvent)
+], Cafe.prototype, "current_event", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({
+        default: 'Normal Cafe',
+        immutable: true,
+    }),
+    __metadata("design:type", String)
+], Cafe.prototype, "cafe_type", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({
+        type: [mongoose_2.default.Schema.Types.ObjectId],
+        ref: 'Comment',
+    }),
+    __metadata("design:type", Array)
+], Cafe.prototype, "comments", void 0);
+exports.Cafe = Cafe = __decorate([
+    (0, mongoose_1.Schema)({ timestamps: true })
+], Cafe);
+exports.CafeSchema = mongoose_1.SchemaFactory.createForClass(Cafe);
+
+
+/***/ }),
+/* 59 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+"use strict";
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var _a, _b, _c, _d;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.CafeDTO = void 0;
+const class_validator_1 = __webpack_require__(13);
+const cafe_schema_1 = __webpack_require__(58);
+const comment_schema_1 = __webpack_require__(51);
+const user_schema_1 = __webpack_require__(19);
+class CafeDTO {
+}
+exports.CafeDTO = CafeDTO;
+__decorate([
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CafeDTO.prototype, "cafe_name", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CafeDTO.prototype, "cafe_description", void 0);
+__decorate([
+    (0, class_validator_1.IsArray)(),
+    __metadata("design:type", Array)
+], CafeDTO.prototype, "cafe_image", void 0);
+__decorate([
+    (0, class_validator_1.IsObject)(),
+    __metadata("design:type", Object)
+], CafeDTO.prototype, "cafe_location", void 0);
+__decorate([
+    (0, class_validator_1.IsObject)(),
+    __metadata("design:type", Object)
+], CafeDTO.prototype, "cafe_price", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", typeof (_a = typeof user_schema_1.User !== "undefined" && user_schema_1.User) === "function" ? _a : Object)
+], CafeDTO.prototype, "cafe_owner", void 0);
+__decorate([
+    (0, class_validator_1.IsArray)(),
+    __metadata("design:type", typeof (_b = typeof comment_schema_1.Comment !== "undefined" && comment_schema_1.Comment) === "function" ? _b : Object)
+], CafeDTO.prototype, "comments", void 0);
+__decorate([
+    (0, class_validator_1.IsArray)(),
+    __metadata("design:type", typeof (_c = typeof user_schema_1.User !== "undefined" && user_schema_1.User) === "function" ? _c : Object)
+], CafeDTO.prototype, "thumb_up", void 0);
+__decorate([
+    (0, class_validator_1.IsObject)(),
+    __metadata("design:type", Object)
+], CafeDTO.prototype, "open_time", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", Object)
+], CafeDTO.prototype, "status_open", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", Object)
+], CafeDTO.prototype, "admin_approval", void 0);
+__decorate([
+    (0, class_validator_1.IsObject)(),
+    __metadata("design:type", Object)
+], CafeDTO.prototype, "current_event", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", typeof (_d = typeof cafe_schema_1.CafeType !== "undefined" && cafe_schema_1.CafeType) === "function" ? _d : Object)
+], CafeDTO.prototype, "cafe_type", void 0);
+
+
+/***/ }),
+/* 60 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+"use strict";
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.CommentModule = void 0;
+const common_1 = __webpack_require__(7);
+const comment_schema_1 = __webpack_require__(51);
+const comment_service_1 = __webpack_require__(61);
+const comment_controller_1 = __webpack_require__(62);
+const users_module_1 = __webpack_require__(10);
+const mongoose_1 = __webpack_require__(15);
+const comment_schema_2 = __webpack_require__(51);
+const post_module_1 = __webpack_require__(46);
+const cafe_module_1 = __webpack_require__(55);
+let CommentModule = exports.CommentModule = class CommentModule {
+};
+exports.CommentModule = CommentModule = __decorate([
+    (0, common_1.Module)({
+        imports: [
+            users_module_1.UserModule,
+            post_module_1.PostModule,
+            cafe_module_1.CafeModule,
+            mongoose_1.MongooseModule.forFeature([{ name: comment_schema_1.Comment.name, schema: comment_schema_2.CommentSchema }]),
+        ],
+        controllers: [comment_controller_1.CommentController],
+        providers: [comment_service_1.CommentService],
+        exports: [comment_service_1.CommentService],
+    })
+], CommentModule);
+
+
+/***/ }),
+/* 61 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+"use strict";
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
+var _a, _b, _c, _d;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.CommentService = void 0;
+const common_1 = __webpack_require__(7);
+const mongoose_1 = __webpack_require__(15);
+const mongoose_2 = __webpack_require__(18);
+const user_service_1 = __webpack_require__(17);
+const comment_schema_1 = __webpack_require__(51);
+const cafe_service_1 = __webpack_require__(57);
+const post_service_1 = __webpack_require__(49);
+let CommentService = exports.CommentService = class CommentService {
+    constructor(commentModel, userService, postService, cafeService) {
+        this.commentModel = commentModel;
+        this.userService = userService;
+        this.postService = postService;
+        this.cafeService = cafeService;
+    }
+    async findAll() {
+        return await this.commentModel.find({}).populate('ownerId').lean().exec();
+    }
+    async create(currentUserId, commentDTO) {
+        const user = await this.userService.findById(currentUserId);
+        if (!user) {
+            throw new common_1.NotFoundException('Invalid user id or user not existed');
+        }
+        const post = await this.postService.findOneById(commentDTO.postId);
+        const cafe = await this.cafeService.findById(commentDTO.cafeId);
+        if (post) {
+            const newPostComment = await new this.commentModel({
+                ...commentDTO,
+                thumb_up: [],
+                comment_descendand: [],
+                ownerId: currentUserId,
+            });
+            await this.postService.updateComment(commentDTO.postId, newPostComment._id);
+            return newPostComment.save();
+        }
+        if (cafe) {
+            const newCafeComment = await new this.commentModel({
+                ...commentDTO,
+                thumb_up: [],
+                comment_descendand: [],
+                ownerId: currentUserId,
+            });
+            await this.cafeService.updateComment(commentDTO.cafeId, newCafeComment._id);
+            return newCafeComment.save();
+        }
+    }
+};
+exports.CommentService = CommentService = __decorate([
+    (0, common_1.Injectable)(),
+    __param(0, (0, mongoose_1.InjectModel)(comment_schema_1.Comment.name)),
+    __metadata("design:paramtypes", [typeof (_a = typeof mongoose_2.Model !== "undefined" && mongoose_2.Model) === "function" ? _a : Object, typeof (_b = typeof user_service_1.UserService !== "undefined" && user_service_1.UserService) === "function" ? _b : Object, typeof (_c = typeof post_service_1.PostService !== "undefined" && post_service_1.PostService) === "function" ? _c : Object, typeof (_d = typeof cafe_service_1.CafeService !== "undefined" && cafe_service_1.CafeService) === "function" ? _d : Object])
+], CommentService);
+
+
+/***/ }),
+/* 62 */
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+"use strict";
+
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __metadata = (this && this.__metadata) || function (k, v) {
+    if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
+};
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
+var _a, _b, _c;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.CommentController = void 0;
+const common_1 = __webpack_require__(7);
+const comment_service_1 = __webpack_require__(61);
+const HttpsCode_1 = __webpack_require__(20);
+const getCurrentUser_decorator_1 = __webpack_require__(33);
+const role_decorator_1 = __webpack_require__(23);
+let CommentController = exports.CommentController = class CommentController {
+    constructor(commentService) {
+        this.commentService = commentService;
+    }
+    async findAll() {
+        try {
+            const comments = await this.commentService.findAll();
+            if (!comments || comments.length <= 0) {
+                return {
+                    success: 'ok',
+                    statusCode: HttpsCode_1.StatusCode.NOT_FOUND,
+                    users: 'Comment not available right now',
+                };
+            }
+            return {
+                success: 'ok',
+                statusCode: HttpsCode_1.StatusCode.OK,
+                comments: comments,
+            };
+        }
+        catch (error) {
+            return {
+                success: 'false',
+                statusCode: HttpsCode_1.StatusCode.BAD_REQUEST,
+                msg: `No comment available right now`,
+            };
+        }
+    }
+    async createComment(currentUserId, commentDTO) {
+        try {
+            console.log('userId: ', currentUserId);
+            const comment = await this.commentService.create(currentUserId, commentDTO);
+            return {
+                success: 'ok',
+                statusCode: HttpsCode_1.StatusCode.OK,
+                msg: `Comment successfully`,
+                comment: comment,
+            };
+        }
+        catch (error) {
+            return {
+                success: 'false',
+                statusCode: HttpsCode_1.StatusCode.BAD_REQUEST,
+                msg: error.message,
+            };
+        }
+    }
+};
+__decorate([
+    (0, common_1.Get)(),
+    (0, role_decorator_1.Roles)('ADMIN'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", typeof (_b = typeof Promise !== "undefined" && Promise) === "function" ? _b : Object)
+], CommentController.prototype, "findAll", null);
+__decorate([
+    (0, common_1.Post)(),
+    __param(0, (0, getCurrentUser_decorator_1.GetCurrentUser)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:returntype", typeof (_c = typeof Promise !== "undefined" && Promise) === "function" ? _c : Object)
+], CommentController.prototype, "createComment", null);
+exports.CommentController = CommentController = __decorate([
+    (0, common_1.Controller)('api/comment'),
+    __metadata("design:paramtypes", [typeof (_a = typeof comment_service_1.CommentService !== "undefined" && comment_service_1.CommentService) === "function" ? _a : Object])
+], CommentController);
 
 
 /***/ })
@@ -2589,7 +3528,7 @@ exports.CoffeeService = CoffeeService = __decorate([
 /******/ 	
 /******/ 	/* webpack/runtime/getFullHash */
 /******/ 	(() => {
-/******/ 		__webpack_require__.h = () => ("cb2b9be498537001d6d4")
+/******/ 		__webpack_require__.h = () => ("c463ceeba57c5365e09e")
 /******/ 	})();
 /******/ 	
 /******/ 	/* webpack/runtime/hasOwnProperty shorthand */

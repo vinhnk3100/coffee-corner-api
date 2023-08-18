@@ -19,42 +19,49 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-var _a, _b;
+var _a;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PostService = void 0;
 const common_1 = __webpack_require__(7);
 const mongoose_1 = __webpack_require__(15);
 const mongoose_2 = __webpack_require__(18);
 const post_schema_1 = __webpack_require__(47);
-const user_service_1 = __webpack_require__(17);
 let PostService = exports.PostService = class PostService {
-    constructor(postModel, userService) {
+    constructor(postModel) {
         this.postModel = postModel;
-        this.userService = userService;
     }
     async findAll() {
         return await this.postModel
-            .find()
+            .find({})
+            .populate('thumb_up', 'username')
             .populate('userId', 'avatar username')
+            .populate({
+            path: 'comments',
+            populate: { path: 'ownerId', select: 'username' },
+        })
             .lean()
             .exec();
     }
     async findOneById(postId) {
         return await this.postModel
             .findById(postId)
+            .populate('thumb_up', 'username')
             .populate('userId', 'avatar username')
+            .populate({
+            path: 'comments',
+            populate: { path: 'ownerId', select: 'username' },
+        })
             .lean()
             .exec();
     }
     async create(files, postDTO, userId) {
         const listContentImage = [];
+        console.log('Files: ', files);
         files.content_img.map((i) => {
             return listContentImage.push(i.originalname);
         });
         const newPost = new this.postModel({
-            title: postDTO.title,
-            content: postDTO.content,
-            price: postDTO.price,
+            ...postDTO,
             content_img: listContentImage,
             thumb_up: [],
             userId: userId,
@@ -85,6 +92,20 @@ let PostService = exports.PostService = class PostService {
         }
         return await this.postModel.findByIdAndUpdate({ _id: postId }, { $set: newUpdatePost }, { new: true });
     }
+    async updateComment(postId, commentId) {
+        const commentIdList = [];
+        const post = await this.postModel.findById(postId);
+        if (!post) {
+            throw new common_1.NotFoundException('Invalid post ID or post not existed');
+        }
+        post.comments?.map((comment) => {
+            commentIdList.push(comment.toString());
+        });
+        await this.postModel.findByIdAndUpdate({ _id: postId }, commentIdList.length > 0 && commentIdList.includes(commentId)
+            ? { $pull: { comments: commentId } }
+            : { $push: { comments: commentId } }, { new: true });
+        return;
+    }
     async updateThumbUp(postId, userId) {
         const userList = [];
         const post = await this.postModel.findById(postId);
@@ -97,6 +118,7 @@ let PostService = exports.PostService = class PostService {
         await this.postModel.findByIdAndUpdate({ _id: postId }, userList.length > 0 && userList.includes(userId)
             ? { $pull: { thumb_up: userId } }
             : { $push: { thumb_up: userId } }, { new: true });
+        console.log(userList.length > 0 && userList.includes(userId));
         return 1;
     }
     async delete(postId) {
@@ -106,7 +128,7 @@ let PostService = exports.PostService = class PostService {
 exports.PostService = PostService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, mongoose_1.InjectModel)(post_schema_1.Post.name)),
-    __metadata("design:paramtypes", [typeof (_a = typeof mongoose_2.Model !== "undefined" && mongoose_2.Model) === "function" ? _a : Object, typeof (_b = typeof user_service_1.UserService !== "undefined" && user_service_1.UserService) === "function" ? _b : Object])
+    __metadata("design:paramtypes", [typeof (_a = typeof mongoose_2.Model !== "undefined" && mongoose_2.Model) === "function" ? _a : Object])
 ], PostService);
 
 
@@ -117,7 +139,7 @@ exports.runtime =
 /******/ function(__webpack_require__) { // webpackRuntimeModules
 /******/ /* webpack/runtime/getFullHash */
 /******/ (() => {
-/******/ 	__webpack_require__.h = () => ("7bd5fa8588a904d5df5c")
+/******/ 	__webpack_require__.h = () => ("c26db97ad88a247e0cfd")
 /******/ })();
 /******/ 
 /******/ }

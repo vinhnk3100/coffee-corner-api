@@ -107,7 +107,8 @@ export class PostController {
         postId,
         userId,
       );
-      if (!postThumbUpEvent) {
+
+      if (postThumbUpEvent) {
         return {
           success: 'ok',
           statusCode: StatusCode.OK,

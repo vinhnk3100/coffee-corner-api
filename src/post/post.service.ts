@@ -12,9 +12,13 @@ export class PostService {
 
   async findAll(): Promise<any> {
     return await this.postModel
-      .find()
+      .find({})
       .populate('thumb_up', 'username')
       .populate('userId', 'avatar username')
+      .populate({
+        path: 'comments',
+        populate: { path: 'ownerId', select: 'username' },
+      })
       .lean()
       .exec();
   }
@@ -24,19 +28,22 @@ export class PostService {
       .findById(postId)
       .populate('thumb_up', 'username')
       .populate('userId', 'avatar username')
+      .populate({
+        path: 'comments',
+        populate: { path: 'ownerId', select: 'username' },
+      })
       .lean()
       .exec();
   }
 
   async create(files: any, postDTO: PostDTO, userId: string): Promise<any> {
     const listContentImage = [];
+    console.log('Files: ', files);
     files.content_img.map((i: any) => {
       return listContentImage.push(i.originalname);
     });
     const newPost = new this.postModel({
-      title: postDTO.title,
-      content: postDTO.content,
-      price: postDTO.price,
+      ...postDTO,
       content_img: listContentImage,
       thumb_up: [],
       userId: userId,
@@ -77,6 +84,25 @@ export class PostService {
     );
   }
 
+  async updateComment(postId: string, commentId: any): Promise<any> {
+    const commentIdList = [];
+    const post = await this.postModel.findById(postId);
+    if (!post) {
+      throw new NotFoundException('Invalid post ID or post not existed');
+    }
+    post.comments?.map((comment) => {
+      commentIdList.push(comment.toString());
+    });
+    await this.postModel.findByIdAndUpdate(
+      { _id: postId },
+      commentIdList.length > 0 && commentIdList.includes(commentId)
+        ? { $pull: { comments: commentId } }
+        : { $push: { comments: commentId } },
+      { new: true },
+    );
+    return;
+  }
+
   async updateThumbUp(postId: string, userId: string): Promise<any> {
     const userList = [];
     const post = await this.postModel.findById(postId);
@@ -93,8 +119,7 @@ export class PostService {
         : { $push: { thumb_up: userId } },
       { new: true },
     );
-
-    return 1;
+    return userList.length > 0 && userList.includes(userId);
   }
 
   async delete(postId: string): Promise<Post> {

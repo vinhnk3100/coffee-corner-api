@@ -10,14 +10,14 @@ import {
 import { RoleService } from './role.service';
 import { RoleDTO } from './role.dto';
 import { StatusCode } from 'src/ultils/constant/HttpsCode';
-import { UseGuards } from '@nestjs/common';
-import { AccessTokenGuard } from 'src/auth/common/guards/accessToken.guard';
+import { Roles } from 'src/auth/common/decorators/role.decorator';
 
 @Controller('api/role')
 export class RoleController {
   constructor(private readonly roleService: RoleService) {}
 
   @Get()
+  @Roles('ADMIN')
   async findAll(): Promise<any> {
     try {
       const roles = await this.roleService.findAll();
@@ -43,6 +43,7 @@ export class RoleController {
   }
 
   @Post()
+  @Roles('ADMIN')
   async createRole(@Body() roleDTO: RoleDTO): Promise<any> {
     try {
       await this.roleService.create(roleDTO);
@@ -61,13 +62,14 @@ export class RoleController {
   }
 
   @Put(':id')
+  @Roles('ADMIN')
   async updateRole(@Param('id') id, @Body() roleDTO: RoleDTO): Promise<any> {
     try {
-      await this.roleService.update(id, roleDTO);
+      const role = await this.roleService.update(id, roleDTO);
       return {
         success: 'ok',
         statusCode: StatusCode.OK,
-        msg: `Update role ${roleDTO.role} successfully`,
+        msg: `Update role ${role.role} successfully`,
       };
     } catch (e) {
       return {
@@ -79,6 +81,7 @@ export class RoleController {
   }
 
   @Delete(':id')
+  @Roles('ADMIN')
   async deleteRole(@Param('id') id, @Body() roleDTO: RoleDTO): Promise<any> {
     try {
       await this.roleService.delete(id);

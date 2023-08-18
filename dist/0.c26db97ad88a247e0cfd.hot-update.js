@@ -32,27 +32,36 @@ let PostService = exports.PostService = class PostService {
     }
     async findAll() {
         return await this.postModel
-            .find()
+            .find({})
+            .populate('thumb_up', 'username')
             .populate('userId', 'avatar username')
+            .populate({
+            path: 'comments',
+            populate: { path: 'ownerId', select: 'username' },
+        })
             .lean()
             .exec();
     }
     async findOneById(postId) {
         return await this.postModel
             .findById(postId)
+            .populate('thumb_up', 'username')
             .populate('userId', 'avatar username')
+            .populate({
+            path: 'comments',
+            populate: { path: 'ownerId', select: 'username' },
+        })
             .lean()
             .exec();
     }
     async create(files, postDTO, userId) {
         const listContentImage = [];
+        console.log('Files: ', files);
         files.content_img.map((i) => {
             return listContentImage.push(i.originalname);
         });
         const newPost = new this.postModel({
-            title: postDTO.title,
-            content: postDTO.content,
-            price: postDTO.price,
+            ...postDTO,
             content_img: listContentImage,
             thumb_up: [],
             userId: userId,
@@ -83,6 +92,20 @@ let PostService = exports.PostService = class PostService {
         }
         return await this.postModel.findByIdAndUpdate({ _id: postId }, { $set: newUpdatePost }, { new: true });
     }
+    async updateComment(postId, commentId) {
+        const commentIdList = [];
+        const post = await this.postModel.findById(postId);
+        if (!post) {
+            throw new common_1.NotFoundException('Invalid post ID or post not existed');
+        }
+        post.comments?.map((comment) => {
+            commentIdList.push(comment.toString());
+        });
+        await this.postModel.findByIdAndUpdate({ _id: postId }, commentIdList.length > 0 && commentIdList.includes(commentId)
+            ? { $pull: { comments: commentId } }
+            : { $push: { comments: commentId } }, { new: true });
+        return;
+    }
     async updateThumbUp(postId, userId) {
         const userList = [];
         const post = await this.postModel.findById(postId);
@@ -95,7 +118,7 @@ let PostService = exports.PostService = class PostService {
         await this.postModel.findByIdAndUpdate({ _id: postId }, userList.length > 0 && userList.includes(userId)
             ? { $pull: { thumb_up: userId } }
             : { $push: { thumb_up: userId } }, { new: true });
-        return 1;
+        return userList.length > 0 && userList.includes(userId);
     }
     async delete(postId) {
         return await this.postModel.findByIdAndRemove(postId);
@@ -115,7 +138,7 @@ exports.runtime =
 /******/ function(__webpack_require__) { // webpackRuntimeModules
 /******/ /* webpack/runtime/getFullHash */
 /******/ (() => {
-/******/ 	__webpack_require__.h = () => ("4f6f5905cbca14f57009")
+/******/ 	__webpack_require__.h = () => ("05091e62a542ebfd6a8d")
 /******/ })();
 /******/ 
 /******/ }

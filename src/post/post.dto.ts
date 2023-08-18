@@ -1,4 +1,5 @@
 import { IsNotEmpty, IsArray, IsString } from 'class-validator';
+import { Comment } from 'src/schemas/comment.schema';
 import { User } from 'src/schemas/user.schema';
 
 export class PostDTO {
@@ -21,4 +22,7 @@ export class PostDTO {
 
   @IsString()
   userId: User;
+
+  @IsArray()
+  comments: Comment;
 }
