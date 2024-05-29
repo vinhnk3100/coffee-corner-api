@@ -26,19 +26,19 @@ export class PostController {
       const posts = await this.postService.findAll();
       if (!posts || posts.length <= 0) {
         return {
-          success: 'ok',
+          success: true,
           statusCode: StatusCode.NOT_FOUND,
           users: 'Post not available right now',
         };
       }
       return {
-        success: 'ok',
+        success: true,
         statusCode: StatusCode.OK,
         posts: posts,
       };
     } catch (error) {
       return {
-        success: 'false',
+        success: false,
         statusCode: StatusCode.BAD_REQUEST,
         msg: `No post available right now`,
       };
@@ -51,19 +51,19 @@ export class PostController {
       const post = await this.postService.findOneById(postId);
       if (!post || post.length <= 0) {
         return {
-          success: 'ok',
+          success: true,
           statusCode: StatusCode.NOT_FOUND,
           users: 'Invalid post ID or post not existed',
         };
       }
       return {
-        success: 'ok',
+        success: true,
         statusCode: StatusCode.OK,
         post: post,
       };
     } catch (error) {
       return {
-        success: 'false',
+        success: false,
         statusCode: StatusCode.BAD_REQUEST,
         msg: error.message,
       };
@@ -83,14 +83,14 @@ export class PostController {
     try {
       const newPost = await this.postService.create(files, postDTO, userId);
       return {
-        success: 'ok',
+        success: true,
         statusCode: StatusCode.OK,
         msg: `Create post successfully`,
         post: newPost,
       };
     } catch (error) {
       return {
-        success: 'false',
+        success: false,
         statusCode: StatusCode.BAD_REQUEST,
         msg: error.message,
       };
@@ -110,20 +110,20 @@ export class PostController {
 
       if (postThumbUpEvent) {
         return {
-          success: 'ok',
+          success: true,
           statusCode: StatusCode.OK,
           msg: `Thumb down post success`,
         };
       }
 
       return {
-        success: 'ok',
+        success: true,
         statusCode: StatusCode.OK,
         msg: `Thumb up post success`,
       };
     } catch (error) {
       return {
-        success: 'false',
+        success: false,
         statusCode: StatusCode.BAD_REQUEST,
         msg: error.message,
       };
@@ -144,14 +144,14 @@ export class PostController {
     try {
       const updatePost = await this.postService.update(postId, files, postDTO);
       return {
-        success: 'ok',
+        success: true,
         statusCode: StatusCode.OK,
         msg: `Update post ${postId} successfully`,
         updatePost: updatePost,
       };
     } catch (error) {
       return {
-        success: 'false',
+        success: false,
         statusCode: StatusCode.BAD_REQUEST,
         msg: error.message,
       };
@@ -164,14 +164,14 @@ export class PostController {
     try {
       const post = await this.postService.delete(postId);
       return {
-        success: 'ok',
+        success: true,
         statusCode: StatusCode.OK,
         msg: `Delete post ${postId} successfully`,
         post: post,
       };
     } catch (error) {
       return {
-        success: 'false',
+        success: false,
         statusCode: StatusCode.BAD_REQUEST,
         msg: error.message,
       };

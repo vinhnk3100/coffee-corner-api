@@ -14,7 +14,7 @@ export class LocalStrategy extends PassportStrategy(Strategy) {
     const user = await this.authService.validateUser(username, rawPassword);
     if (!user) {
       return {
-        success: 'false',
+        success: false,
         statusCode: StatusCode.UNAUTHORIZED,
         msg: 'Username or password is not existed or incorrect',
       };

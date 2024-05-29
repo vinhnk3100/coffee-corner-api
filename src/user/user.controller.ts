@@ -24,19 +24,19 @@ export class UserController {
       const users = await this.userService.findAll();
       if (!users || users.length <= 0) {
         return {
-          success: 'ok',
+          success: true,
           statusCode: StatusCode.NOT_FOUND,
           users: 'User not available right now',
         };
       }
       return {
-        success: 'ok',
+        success: true,
         statusCode: StatusCode.OK,
         user: users,
       };
     } catch (error) {
       return {
-        success: 'false',
+        success: false,
         statusCode: StatusCode.BAD_REQUEST,
         msg: `No user available right now`,
       };
@@ -50,13 +50,13 @@ export class UserController {
       const user = await this.userService.findById(id);
       if (!user) {
         return {
-          success: 'ok',
+          success: true,
           statusCode: StatusCode.NOT_FOUND,
           user: 'User ID is invalid or not existed',
         };
       }
       return {
-        success: 'ok',
+        success: true,
         statusCode: StatusCode.OK,
         user: user,
       };
@@ -72,14 +72,14 @@ export class UserController {
       const newUser = { ...userDTO, password: await hashPassword(password) };
       await this.userService.create(newUser);
       return {
-        success: 'ok',
+        success: true,
         statusCode: StatusCode.OK,
         msg: `Create user ${userDTO.username} successfully`,
         user: newUser,
       };
     } catch (error) {
       return {
-        success: 'false',
+        success: false,
         statusCode: StatusCode.BAD_REQUEST,
         msg: error.message,
       };
@@ -92,13 +92,13 @@ export class UserController {
     try {
       await this.userService.update(id, userDTO);
       return {
-        success: 'ok',
+        success: true,
         statusCode: StatusCode.OK,
         msg: `Update user ${id} successfully`,
       };
     } catch (e) {
       return {
-        success: 'false',
+        success: false,
         statusCode: StatusCode.BAD_REQUEST,
         err: e.message,
       };
@@ -111,14 +111,14 @@ export class UserController {
     try {
       const user = await this.userService.delete(id);
       return {
-        success: 'ok',
+        success: true,
         statusCode: StatusCode.OK,
         msg: `User ${id} delete successfully`,
         user: user,
       };
     } catch (e) {
       return {
-        success: 'false',
+        success: false,
         statusCode: StatusCode.BAD_REQUEST,
         err: e.message,
       };

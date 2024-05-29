@@ -26,19 +26,19 @@ export class CafeController {
       const cafes = await this.cafeService.findAll();
       if (!cafes || cafes.length < 1) {
         return {
-          success: 'ok',
+          success: true,
           statusCode: StatusCode.NOT_FOUND,
           msg: 'There are currently not any suggest cafes right now',
         };
       }
       return {
-        success: 'ok',
+        success: true,
         statusCode: StatusCode.OK,
         cafes: cafes,
       };
     } catch (error) {
       return {
-        success: 'false',
+        success: false,
         statusCode: StatusCode.BAD_REQUEST,
         msg: error.message,
       };
@@ -51,19 +51,19 @@ export class CafeController {
       const cafe = await this.cafeService.findById(cafeId);
       if (!cafe) {
         return {
-          success: 'ok',
+          success: true,
           statusCode: StatusCode.NOT_FOUND,
           msg: 'There are currently not any suggest cafes right now',
         };
       }
       return {
-        success: 'ok',
+        success: true,
         statusCode: StatusCode.OK,
         cafe: cafe,
       };
     } catch (error) {
       return {
-        success: 'false',
+        success: false,
         statusCode: StatusCode.BAD_REQUEST,
         msg: error.message,
       };
@@ -84,7 +84,7 @@ export class CafeController {
     try {
       const cafe = await this.cafeService.create(files, cafeDTO, userId);
       return {
-        success: 'ok',
+        success: true,
         statusCode: StatusCode.OK,
         msg: 'New suggest cafe has been created',
         cafe:
@@ -96,7 +96,7 @@ export class CafeController {
       };
     } catch (error) {
       return {
-        success: 'false',
+        success: false,
         statusCode: StatusCode.BAD_REQUEST,
         msg: error.message,
       };
@@ -109,7 +109,7 @@ export class CafeController {
     try {
       const cafe = await this.cafeService.updateWithoutFiles(cafeId, cafeDTO);
       return {
-        success: 'ok',
+        success: true,
         statusCode: StatusCode.OK,
         msg:
           cafe.admin_approval === 0
@@ -119,7 +119,7 @@ export class CafeController {
       };
     } catch (error) {
       return {
-        success: 'false',
+        success: false,
         statusCode: StatusCode.BAD_REQUEST,
         msg: error.message,
       };
@@ -139,20 +139,20 @@ export class CafeController {
 
       if (cafeThumbUpEvent) {
         return {
-          success: 'ok',
+          success: true,
           statusCode: StatusCode.OK,
           msg: `Thumb down cafe success`,
         };
       }
 
       return {
-        success: 'ok',
+        success: true,
         statusCode: StatusCode.OK,
         msg: `Thumb up cafe success`,
       };
     } catch (error) {
       return {
-        success: 'false',
+        success: false,
         statusCode: StatusCode.BAD_REQUEST,
         msg: error.message,
       };
@@ -174,14 +174,14 @@ export class CafeController {
       console.log('Run at UpdateCafe');
       const updateCafe = await this.cafeService.update(files, cafeId, cafeDTO);
       return {
-        success: 'ok',
+        success: true,
         statusCode: StatusCode.OK,
         msg: `Update suggest cafe successfully`,
         updateCafe: updateCafe,
       };
     } catch (error) {
       return {
-        success: 'false',
+        success: false,
         statusCode: StatusCode.BAD_REQUEST,
         msg: error.message,
       };
@@ -195,19 +195,19 @@ export class CafeController {
       const cafe = await this.cafeService.delete(cafeId);
       if (!cafe) {
         return {
-          success: 'ok',
+          success: true,
           statusCode: StatusCode.NOT_FOUND,
           msg: 'Invalid ID or cafe not found',
         };
       }
       return {
-        success: 'ok',
+        success: true,
         statusCode: StatusCode.OK,
         cafe: `Delete cafe ${"'" + cafe.cafe_name + "'"} success`,
       };
     } catch (error) {
       return {
-        success: 'false',
+        success: false,
         statusCode: StatusCode.BAD_REQUEST,
         msg: error.message,
       };

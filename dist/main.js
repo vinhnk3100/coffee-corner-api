@@ -448,20 +448,20 @@ let UserController = exports.UserController = class UserController {
             const users = await this.userService.findAll();
             if (!users || users.length <= 0) {
                 return {
-                    success: 'ok',
+                    success: true,
                     statusCode: HttpsCode_1.StatusCode.NOT_FOUND,
                     users: 'User not available right now',
                 };
             }
             return {
-                success: 'ok',
+                success: true,
                 statusCode: HttpsCode_1.StatusCode.OK,
                 user: users,
             };
         }
         catch (error) {
             return {
-                success: 'false',
+                success: false,
                 statusCode: HttpsCode_1.StatusCode.BAD_REQUEST,
                 msg: `No user available right now`,
             };
@@ -472,13 +472,13 @@ let UserController = exports.UserController = class UserController {
             const user = await this.userService.findById(id);
             if (!user) {
                 return {
-                    success: 'ok',
+                    success: true,
                     statusCode: HttpsCode_1.StatusCode.NOT_FOUND,
                     user: 'User ID is invalid or not existed',
                 };
             }
             return {
-                success: 'ok',
+                success: true,
                 statusCode: HttpsCode_1.StatusCode.OK,
                 user: user,
             };
@@ -493,7 +493,7 @@ let UserController = exports.UserController = class UserController {
             const newUser = { ...userDTO, password: await (0, auth_utils_1.hashPassword)(password) };
             await this.userService.create(newUser);
             return {
-                success: 'ok',
+                success: true,
                 statusCode: HttpsCode_1.StatusCode.OK,
                 msg: `Create user ${userDTO.username} successfully`,
                 user: newUser,
@@ -501,7 +501,7 @@ let UserController = exports.UserController = class UserController {
         }
         catch (error) {
             return {
-                success: 'false',
+                success: false,
                 statusCode: HttpsCode_1.StatusCode.BAD_REQUEST,
                 msg: error.message,
             };
@@ -511,14 +511,14 @@ let UserController = exports.UserController = class UserController {
         try {
             await this.userService.update(id, userDTO);
             return {
-                success: 'ok',
+                success: true,
                 statusCode: HttpsCode_1.StatusCode.OK,
                 msg: `Update user ${id} successfully`,
             };
         }
         catch (e) {
             return {
-                success: 'false',
+                success: false,
                 statusCode: HttpsCode_1.StatusCode.BAD_REQUEST,
                 err: e.message,
             };
@@ -528,7 +528,7 @@ let UserController = exports.UserController = class UserController {
         try {
             const user = await this.userService.delete(id);
             return {
-                success: 'ok',
+                success: true,
                 statusCode: HttpsCode_1.StatusCode.OK,
                 msg: `User ${id} delete successfully`,
                 user: user,
@@ -536,7 +536,7 @@ let UserController = exports.UserController = class UserController {
         }
         catch (e) {
             return {
-                success: 'false',
+                success: false,
                 statusCode: HttpsCode_1.StatusCode.BAD_REQUEST,
                 err: e.message,
             };
@@ -1056,14 +1056,14 @@ let AuthController = exports.AuthController = class AuthController {
         try {
             await this.authService.signUp(userDTO);
             return {
-                success: 'ok',
+                success: true,
                 statusCode: HttpsCode_1.StatusCode.OK,
                 msg: 'Signup success. Proceed to login page...',
             };
         }
         catch (e) {
             return {
-                success: 'false',
+                success: false,
                 statusCode: HttpsCode_1.StatusCode.BAD_REQUEST,
                 err: e.message,
             };
@@ -1075,7 +1075,7 @@ let AuthController = exports.AuthController = class AuthController {
             if (data.statusCode === 401)
                 return data;
             return {
-                success: 'ok',
+                success: true,
                 statusCode: HttpsCode_1.StatusCode.OK,
                 msg: 'Login success. Proceed to next page... ',
                 data: data.tokens,
@@ -1083,7 +1083,7 @@ let AuthController = exports.AuthController = class AuthController {
         }
         catch (e) {
             return {
-                success: 'false',
+                success: false,
                 statusCode: HttpsCode_1.StatusCode.BAD_REQUEST,
                 err: e.message,
             };
@@ -1093,14 +1093,14 @@ let AuthController = exports.AuthController = class AuthController {
         try {
             await this.authService.signOut(userId);
             return {
-                success: 'ok',
+                success: true,
                 statusCode: HttpsCode_1.StatusCode.OK,
                 msg: 'Logout success. Proceed to login page... ',
             };
         }
         catch (e) {
             return {
-                success: 'false',
+                success: false,
                 statusCode: HttpsCode_1.StatusCode.BAD_REQUEST,
                 err: e.message,
             };
@@ -1114,14 +1114,14 @@ let AuthController = exports.AuthController = class AuthController {
                 .trim();
             const tokens = await this.authService.refreshToken(userId, refreshToken);
             return {
-                success: 'ok',
+                success: true,
                 statusCode: HttpsCode_1.StatusCode.OK,
                 data: tokens,
             };
         }
         catch (e) {
             return {
-                success: 'false',
+                success: false,
                 statusCode: HttpsCode_1.StatusCode.BAD_REQUEST,
                 err: e.message,
             };
@@ -1239,7 +1239,7 @@ let AuthService = exports.AuthService = class AuthService {
         }
         catch (e) {
             return {
-                success: 'false',
+                success: false,
                 statusCode: HttpsCode_1.StatusCode.BAD_REQUEST,
                 err: e.message,
             };
@@ -1426,7 +1426,7 @@ let LocalStrategy = exports.LocalStrategy = class LocalStrategy extends (0, pass
         const user = await this.authService.validateUser(username, rawPassword);
         if (!user) {
             return {
-                success: 'false',
+                success: false,
                 statusCode: HttpsCode_1.StatusCode.UNAUTHORIZED,
                 msg: 'Username or password is not existed or incorrect',
             };
@@ -1598,20 +1598,20 @@ let RoleController = exports.RoleController = class RoleController {
             const roles = await this.roleService.findAll();
             if (!roles || roles.length <= 0) {
                 return {
-                    success: 'ok',
+                    success: true,
                     statusCode: HttpsCode_1.StatusCode.NOT_FOUND,
                     roles: 'Role not available right now',
                 };
             }
             return {
-                success: 'ok',
+                success: true,
                 statusCode: HttpsCode_1.StatusCode.OK,
                 roles: roles,
             };
         }
         catch (error) {
             return {
-                success: 'false',
+                success: false,
                 statusCode: HttpsCode_1.StatusCode.BAD_REQUEST,
                 msg: `No role available right now`,
             };
@@ -1621,14 +1621,14 @@ let RoleController = exports.RoleController = class RoleController {
         try {
             await this.roleService.create(roleDTO);
             return {
-                success: 'ok',
+                success: true,
                 statusCode: HttpsCode_1.StatusCode.OK,
                 msg: `Create role ${roleDTO.role} successfully`,
             };
         }
         catch (e) {
             return {
-                success: 'false',
+                success: false,
                 statusCode: HttpsCode_1.StatusCode.BAD_REQUEST,
                 msg: e.message,
             };
@@ -1638,14 +1638,14 @@ let RoleController = exports.RoleController = class RoleController {
         try {
             const role = await this.roleService.update(id, roleDTO);
             return {
-                success: 'ok',
+                success: true,
                 statusCode: HttpsCode_1.StatusCode.OK,
                 msg: `Update role ${role.role} successfully`,
             };
         }
         catch (e) {
             return {
-                success: 'false',
+                success: false,
                 statusCode: HttpsCode_1.StatusCode.BAD_REQUEST,
                 msg: e.message,
             };
@@ -1655,14 +1655,14 @@ let RoleController = exports.RoleController = class RoleController {
         try {
             await this.roleService.delete(id);
             return {
-                success: 'ok',
+                success: true,
                 statusCode: HttpsCode_1.StatusCode.OK,
                 msg: `Delete role ${roleDTO.role} successfully`,
             };
         }
         catch (e) {
             return {
-                success: 'false',
+                success: false,
                 statusCode: HttpsCode_1.StatusCode.BAD_REQUEST,
                 msg: e.message,
             };
@@ -2058,20 +2058,20 @@ let PostController = exports.PostController = class PostController {
             const posts = await this.postService.findAll();
             if (!posts || posts.length <= 0) {
                 return {
-                    success: 'ok',
+                    success: true,
                     statusCode: HttpsCode_1.StatusCode.NOT_FOUND,
                     users: 'Post not available right now',
                 };
             }
             return {
-                success: 'ok',
+                success: true,
                 statusCode: HttpsCode_1.StatusCode.OK,
                 posts: posts,
             };
         }
         catch (error) {
             return {
-                success: 'false',
+                success: false,
                 statusCode: HttpsCode_1.StatusCode.BAD_REQUEST,
                 msg: `No post available right now`,
             };
@@ -2082,20 +2082,20 @@ let PostController = exports.PostController = class PostController {
             const post = await this.postService.findOneById(postId);
             if (!post || post.length <= 0) {
                 return {
-                    success: 'ok',
+                    success: true,
                     statusCode: HttpsCode_1.StatusCode.NOT_FOUND,
                     users: 'Invalid post ID or post not existed',
                 };
             }
             return {
-                success: 'ok',
+                success: true,
                 statusCode: HttpsCode_1.StatusCode.OK,
                 post: post,
             };
         }
         catch (error) {
             return {
-                success: 'false',
+                success: false,
                 statusCode: HttpsCode_1.StatusCode.BAD_REQUEST,
                 msg: error.message,
             };
@@ -2105,7 +2105,7 @@ let PostController = exports.PostController = class PostController {
         try {
             const newPost = await this.postService.create(files, postDTO, userId);
             return {
-                success: 'ok',
+                success: true,
                 statusCode: HttpsCode_1.StatusCode.OK,
                 msg: `Create post successfully`,
                 post: newPost,
@@ -2113,7 +2113,7 @@ let PostController = exports.PostController = class PostController {
         }
         catch (error) {
             return {
-                success: 'false',
+                success: false,
                 statusCode: HttpsCode_1.StatusCode.BAD_REQUEST,
                 msg: error.message,
             };
@@ -2124,20 +2124,20 @@ let PostController = exports.PostController = class PostController {
             const postThumbUpEvent = await this.postService.updateThumbUp(postId, userId);
             if (postThumbUpEvent) {
                 return {
-                    success: 'ok',
+                    success: true,
                     statusCode: HttpsCode_1.StatusCode.OK,
                     msg: `Thumb down post success`,
                 };
             }
             return {
-                success: 'ok',
+                success: true,
                 statusCode: HttpsCode_1.StatusCode.OK,
                 msg: `Thumb up post success`,
             };
         }
         catch (error) {
             return {
-                success: 'false',
+                success: false,
                 statusCode: HttpsCode_1.StatusCode.BAD_REQUEST,
                 msg: error.message,
             };
@@ -2147,7 +2147,7 @@ let PostController = exports.PostController = class PostController {
         try {
             const updatePost = await this.postService.update(postId, files, postDTO);
             return {
-                success: 'ok',
+                success: true,
                 statusCode: HttpsCode_1.StatusCode.OK,
                 msg: `Update post ${postId} successfully`,
                 updatePost: updatePost,
@@ -2155,7 +2155,7 @@ let PostController = exports.PostController = class PostController {
         }
         catch (error) {
             return {
-                success: 'false',
+                success: false,
                 statusCode: HttpsCode_1.StatusCode.BAD_REQUEST,
                 msg: error.message,
             };
@@ -2165,7 +2165,7 @@ let PostController = exports.PostController = class PostController {
         try {
             const post = await this.postService.delete(postId);
             return {
-                success: 'ok',
+                success: true,
                 statusCode: HttpsCode_1.StatusCode.OK,
                 msg: `Delete post ${postId} successfully`,
                 post: post,
@@ -2173,7 +2173,7 @@ let PostController = exports.PostController = class PostController {
         }
         catch (error) {
             return {
-                success: 'false',
+                success: false,
                 statusCode: HttpsCode_1.StatusCode.BAD_REQUEST,
                 msg: error.message,
             };
@@ -2623,20 +2623,20 @@ let CafeController = exports.CafeController = class CafeController {
             const cafes = await this.cafeService.findAll();
             if (!cafes || cafes.length < 1) {
                 return {
-                    success: 'ok',
+                    success: true,
                     statusCode: HttpsCode_1.StatusCode.NOT_FOUND,
                     msg: 'There are currently not any suggest cafes right now',
                 };
             }
             return {
-                success: 'ok',
+                success: true,
                 statusCode: HttpsCode_1.StatusCode.OK,
                 cafes: cafes,
             };
         }
         catch (error) {
             return {
-                success: 'false',
+                success: false,
                 statusCode: HttpsCode_1.StatusCode.BAD_REQUEST,
                 msg: error.message,
             };
@@ -2647,20 +2647,20 @@ let CafeController = exports.CafeController = class CafeController {
             const cafe = await this.cafeService.findById(cafeId);
             if (!cafe) {
                 return {
-                    success: 'ok',
+                    success: true,
                     statusCode: HttpsCode_1.StatusCode.NOT_FOUND,
                     msg: 'There are currently not any suggest cafes right now',
                 };
             }
             return {
-                success: 'ok',
+                success: true,
                 statusCode: HttpsCode_1.StatusCode.OK,
                 cafe: cafe,
             };
         }
         catch (error) {
             return {
-                success: 'false',
+                success: false,
                 statusCode: HttpsCode_1.StatusCode.BAD_REQUEST,
                 msg: error.message,
             };
@@ -2670,7 +2670,7 @@ let CafeController = exports.CafeController = class CafeController {
         try {
             const cafe = await this.cafeService.create(files, cafeDTO, userId);
             return {
-                success: 'ok',
+                success: true,
                 statusCode: HttpsCode_1.StatusCode.OK,
                 msg: 'New suggest cafe has been created',
                 cafe: cafe.cafe_name +
@@ -2682,7 +2682,7 @@ let CafeController = exports.CafeController = class CafeController {
         }
         catch (error) {
             return {
-                success: 'false',
+                success: false,
                 statusCode: HttpsCode_1.StatusCode.BAD_REQUEST,
                 msg: error.message,
             };
@@ -2692,7 +2692,7 @@ let CafeController = exports.CafeController = class CafeController {
         try {
             const cafe = await this.cafeService.updateWithoutFiles(cafeId, cafeDTO);
             return {
-                success: 'ok',
+                success: true,
                 statusCode: HttpsCode_1.StatusCode.OK,
                 msg: cafe.admin_approval === 0
                     ? `Admin has unapproved this cafe.`
@@ -2702,7 +2702,7 @@ let CafeController = exports.CafeController = class CafeController {
         }
         catch (error) {
             return {
-                success: 'false',
+                success: false,
                 statusCode: HttpsCode_1.StatusCode.BAD_REQUEST,
                 msg: error.message,
             };
@@ -2713,20 +2713,20 @@ let CafeController = exports.CafeController = class CafeController {
             const cafeThumbUpEvent = await this.cafeService.updateThumbUp(cafeId, userId);
             if (cafeThumbUpEvent) {
                 return {
-                    success: 'ok',
+                    success: true,
                     statusCode: HttpsCode_1.StatusCode.OK,
                     msg: `Thumb down cafe success`,
                 };
             }
             return {
-                success: 'ok',
+                success: true,
                 statusCode: HttpsCode_1.StatusCode.OK,
                 msg: `Thumb up cafe success`,
             };
         }
         catch (error) {
             return {
-                success: 'false',
+                success: false,
                 statusCode: HttpsCode_1.StatusCode.BAD_REQUEST,
                 msg: error.message,
             };
@@ -2737,7 +2737,7 @@ let CafeController = exports.CafeController = class CafeController {
             console.log('Run at UpdateCafe');
             const updateCafe = await this.cafeService.update(files, cafeId, cafeDTO);
             return {
-                success: 'ok',
+                success: true,
                 statusCode: HttpsCode_1.StatusCode.OK,
                 msg: `Update suggest cafe successfully`,
                 updateCafe: updateCafe,
@@ -2745,7 +2745,7 @@ let CafeController = exports.CafeController = class CafeController {
         }
         catch (error) {
             return {
-                success: 'false',
+                success: false,
                 statusCode: HttpsCode_1.StatusCode.BAD_REQUEST,
                 msg: error.message,
             };
@@ -2756,20 +2756,20 @@ let CafeController = exports.CafeController = class CafeController {
             const cafe = await this.cafeService.delete(cafeId);
             if (!cafe) {
                 return {
-                    success: 'ok',
+                    success: true,
                     statusCode: HttpsCode_1.StatusCode.NOT_FOUND,
                     msg: 'Invalid ID or cafe not found',
                 };
             }
             return {
-                success: 'ok',
+                success: true,
                 statusCode: HttpsCode_1.StatusCode.OK,
                 cafe: `Delete cafe ${"'" + cafe.cafe_name + "'"} success`,
             };
         }
         catch (error) {
             return {
-                success: 'false',
+                success: false,
                 statusCode: HttpsCode_1.StatusCode.BAD_REQUEST,
                 msg: error.message,
             };
@@ -3406,20 +3406,20 @@ let CommentController = exports.CommentController = class CommentController {
             const comments = await this.commentService.findAll();
             if (!comments || comments.length <= 0) {
                 return {
-                    success: 'ok',
+                    success: true,
                     statusCode: HttpsCode_1.StatusCode.NOT_FOUND,
                     users: 'Comment not available right now',
                 };
             }
             return {
-                success: 'ok',
+                success: true,
                 statusCode: HttpsCode_1.StatusCode.OK,
                 comments: comments,
             };
         }
         catch (error) {
             return {
-                success: 'false',
+                success: false,
                 statusCode: HttpsCode_1.StatusCode.BAD_REQUEST,
                 msg: `No comment available right now`,
             };
@@ -3430,7 +3430,7 @@ let CommentController = exports.CommentController = class CommentController {
             console.log('userId: ', currentUserId);
             const comment = await this.commentService.create(currentUserId, commentDTO);
             return {
-                success: 'ok',
+                success: true,
                 statusCode: HttpsCode_1.StatusCode.OK,
                 msg: `Comment successfully`,
                 comment: comment,
@@ -3438,7 +3438,7 @@ let CommentController = exports.CommentController = class CommentController {
         }
         catch (error) {
             return {
-                success: 'false',
+                success: false,
                 statusCode: HttpsCode_1.StatusCode.BAD_REQUEST,
                 msg: error.message,
             };
@@ -3528,7 +3528,7 @@ exports.CommentController = CommentController = __decorate([
 /******/ 	
 /******/ 	/* webpack/runtime/getFullHash */
 /******/ 	(() => {
-/******/ 		__webpack_require__.h = () => ("c463ceeba57c5365e09e")
+/******/ 		__webpack_require__.h = () => ("9adf06138458b26b0935")
 /******/ 	})();
 /******/ 	
 /******/ 	/* webpack/runtime/hasOwnProperty shorthand */

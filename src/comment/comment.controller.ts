@@ -15,19 +15,19 @@ export class CommentController {
       const comments = await this.commentService.findAll();
       if (!comments || comments.length <= 0) {
         return {
-          success: 'ok',
+          success: true,
           statusCode: StatusCode.NOT_FOUND,
           users: 'Comment not available right now',
         };
       }
       return {
-        success: 'ok',
+        success: true,
         statusCode: StatusCode.OK,
         comments: comments,
       };
     } catch (error) {
       return {
-        success: 'false',
+        success: false,
         statusCode: StatusCode.BAD_REQUEST,
         msg: `No comment available right now`,
       };
@@ -46,14 +46,14 @@ export class CommentController {
         commentDTO,
       );
       return {
-        success: 'ok',
+        success: true,
         statusCode: StatusCode.OK,
         msg: `Comment successfully`,
         comment: comment,
       };
     } catch (error) {
       return {
-        success: 'false',
+        success: false,
         statusCode: StatusCode.BAD_REQUEST,
         msg: error.message,
       };

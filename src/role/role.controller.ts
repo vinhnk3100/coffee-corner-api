@@ -23,19 +23,19 @@ export class RoleController {
       const roles = await this.roleService.findAll();
       if (!roles || roles.length <= 0) {
         return {
-          success: 'ok',
+          success: true,
           statusCode: StatusCode.NOT_FOUND,
           roles: 'Role not available right now',
         };
       }
       return {
-        success: 'ok',
+        success: true,
         statusCode: StatusCode.OK,
         roles: roles,
       };
     } catch (error) {
       return {
-        success: 'false',
+        success: false,
         statusCode: StatusCode.BAD_REQUEST,
         msg: `No role available right now`,
       };
@@ -48,13 +48,13 @@ export class RoleController {
     try {
       await this.roleService.create(roleDTO);
       return {
-        success: 'ok',
+        success: true,
         statusCode: StatusCode.OK,
         msg: `Create role ${roleDTO.role} successfully`,
       };
     } catch (e) {
       return {
-        success: 'false',
+        success: false,
         statusCode: StatusCode.BAD_REQUEST,
         msg: e.message,
       };
@@ -67,13 +67,13 @@ export class RoleController {
     try {
       const role = await this.roleService.update(id, roleDTO);
       return {
-        success: 'ok',
+        success: true,
         statusCode: StatusCode.OK,
         msg: `Update role ${role.role} successfully`,
       };
     } catch (e) {
       return {
-        success: 'false',
+        success: false,
         statusCode: StatusCode.BAD_REQUEST,
         msg: e.message,
       };
@@ -86,13 +86,13 @@ export class RoleController {
     try {
       await this.roleService.delete(id);
       return {
-        success: 'ok',
+        success: true,
         statusCode: StatusCode.OK,
         msg: `Delete role ${roleDTO.role} successfully`,
       };
     } catch (e) {
       return {
-        success: 'false',
+        success: false,
         statusCode: StatusCode.BAD_REQUEST,
         msg: e.message,
       };

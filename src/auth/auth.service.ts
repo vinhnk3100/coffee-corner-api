@@ -64,7 +64,7 @@ export class AuthService {
       return user;
     } catch (e) {
       return {
-        success: 'false',
+        success: false,
         statusCode: StatusCode.BAD_REQUEST,
         err: e.message,
       };

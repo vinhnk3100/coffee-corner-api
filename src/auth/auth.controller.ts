@@ -17,13 +17,13 @@ export class AuthController {
     try {
       await this.authService.signUp(userDTO);
       return {
-        success: 'ok',
+        success: true,
         statusCode: StatusCode.OK,
         msg: 'Signup success. Proceed to login page...',
       };
     } catch (e) {
       return {
-        success: 'false',
+        success: false,
         statusCode: StatusCode.BAD_REQUEST,
         err: e.message,
       };
@@ -39,14 +39,14 @@ export class AuthController {
       if (data.statusCode === 401) return data;
 
       return {
-        success: 'ok',
+        success: true,
         statusCode: StatusCode.OK,
         msg: 'Login success. Proceed to next page... ',
         data: data.tokens,
       };
     } catch (e) {
       return {
-        success: 'false',
+        success: false,
         statusCode: StatusCode.BAD_REQUEST,
         err: e.message,
       };
@@ -58,13 +58,13 @@ export class AuthController {
     try {
       await this.authService.signOut(userId);
       return {
-        success: 'ok',
+        success: true,
         statusCode: StatusCode.OK,
         msg: 'Logout success. Proceed to login page... ',
       };
     } catch (e) {
       return {
-        success: 'false',
+        success: false,
         statusCode: StatusCode.BAD_REQUEST,
         err: e.message,
       };
@@ -84,13 +84,13 @@ export class AuthController {
         .trim();
       const tokens = await this.authService.refreshToken(userId, refreshToken);
       return {
-        success: 'ok',
+        success: true,
         statusCode: StatusCode.OK,
         data: tokens,
       };
     } catch (e) {
       return {
-        success: 'false',
+        success: false,
         statusCode: StatusCode.BAD_REQUEST,
         err: e.message,
       };
